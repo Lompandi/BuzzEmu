@@ -48,3 +48,5 @@ std::optional<T> ReadFromVec(const std::vector<uint8_t>& vec, size_t size, size_
 
     return value;
 }
+
+uint64_t ReadFromU64(uint64_t value, uint8_t size);

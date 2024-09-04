@@ -1,5 +1,3 @@
-#exclude
-!Buzz-Emu/emulation/
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -138,3 +136,7 @@ csx/
 ecf/
 rcf/
 PublishScripts/
+
+#exclude
+Buzz-Emu/*
+!Buzz-Emu/emulation/

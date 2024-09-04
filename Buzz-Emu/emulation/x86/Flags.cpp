@@ -93,6 +93,12 @@ u64 AddAndSetFlags(FlagsRegister64& flags, u64 operand1, u64 operand2) {
     return result;
 }
 
+u64 XorAndSetFlags(FlagsRegister64& flags, u64 dst, u64 src) {
+    auto result = dst ^ src;
+    SetLogicOpFlags(flags, result);
+    return result;
+}
+
 
 void SetLogicOpFlags(FlagsRegister64& flags, u64 value) {
     flags.ZF = (value == 0) ? 1 : 0;

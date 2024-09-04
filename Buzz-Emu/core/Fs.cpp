@@ -43,3 +43,11 @@ std::optional<u64> ReadU64FromVec(const std::vector<u8>& vec, size_t size, size_
     std::memcpy(&value, vec.data() + offset, num_bytes);
     return value;
 }
+
+uint64_t ReadFromU64(uint64_t value, uint8_t size) {
+    // Create a mask based on the size
+    uint64_t mask = ((1ULL << size) - 1);
+
+    // Apply mask to the value
+    return value & mask;
+}

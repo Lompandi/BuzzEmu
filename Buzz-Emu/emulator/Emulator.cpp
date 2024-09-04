@@ -7,6 +7,9 @@
 #include "../emulation/x86/ModRM.hpp"
 #include "../emulation/x86/InstructionHandler.hpp"
 
+#define EMU_CHECK_OP_SIZE(n) if (!lendec.GetDecoderCtx().pfx_p_osize || lendec.GetDecoderCtx().osize != ##n) \
+break
+
 bool Emulator::LoadExecutable(const std::string& filename, const std::vector<Section>& sections) {
 
 	//Read the input file
@@ -75,81 +78,75 @@ void Emulator::Run() {
 		switch (opcode) {
 /*======================= ADD instruction(0x01) ========================*/
 		case Instruction::ADD_01:
-			if (!lendec.GetDecoderCtx().p_modrm)
-				break;
-
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 			
 			Add_01(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= ADD instruction(0x03) ========================*/
 		case Instruction::ADD_03:
-			if (!lendec.GetDecoderCtx().p_modrm)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			Add_03(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= Logical Or(0x09) ===================================*/
 		case Instruction::OR_09:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			Or_09(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= Logical Or(0x0C) ===================================*/
 		case Instruction::OR_0C:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
+
 			SetReg(Register::Rax, GET_L_REG(Reg(Register::Rax)) | ReadFromVec<u8>(inst, 1));
 			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) | ReadFromVec<u8>(inst, 1));
 			break;
 /*======================= Logical Or(0x0D) ===================================*/
 		case Instruction::OR_0D:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			Or_0D(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= Logical And(0x24) ==================================*/
 		case Instruction::AND_21:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			And_21(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= Logical And(0x24) ==================================*/
 		case Instruction::AND_24:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
+
 			SetReg(Register::Rax, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
 			SetReg(Register::Rax, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
 			break;
 /*======================= Logical And(0x25) ==================================*/
 		case Instruction::AND_25:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			And_25(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= Subtract(0x29) =====================================*/
 		case Instruction::SUB_29:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
-			SetReg(Register::Rax, SubAndSetFlags(flags, GET_L_REG(Reg(Register::Rax)), ReadFromVec<u8>(inst, 1)));
+			Sub_29(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+/*======================= Subtract(0x2B) =====================================*/
+		case Instruction::SUB_2B:
+			EMU_CHECK_OP_SIZE(2);
+
+			Sub_2B(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= Subtract(0x2C) =====================================*/
 		case Instruction::SUB_2C:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			SetReg(Register::Rax, SubAndSetFlags(flags, GET_L_REG(Reg(Register::Rax)), ReadFromVec<u8>(inst, 1)));
 			break;
 /*======================= Subtract(0x2D) =====================================*/
 		case Instruction::SUB_2D:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			if (lendec.GetDecoderCtx().osize == X86_Osize_16bit && inst.size() == 3)
 				SetReg(Register::Rax, SubAndSetFlags(flags, GET_X_REG(Reg(Register::Rax)), ReadFromVec<u16>(inst, 1)));
@@ -160,23 +157,26 @@ void Emulator::Run() {
 			break;
 /*======================= Exclusive or operation(0x31) =======================*/
 		case Instruction::XOR_31:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			Xor_31(*this, &lendec.GetDecoderCtx(), inst);
 			break;
+/*======================= Exclusive or operation(0x33) =======================*/
+		case Instruction::XOR_33:
+			EMU_CHECK_OP_SIZE(2);
+
+			Xor_33(*this, &lendec.GetDecoderCtx(), inst);
+			break;
 /*======================= Exclusive or operation(0x34) =======================*/
 		case Instruction::XOR_34:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			SetReg(Register::Rax, GET_L_REG(Reg(Register::Rax)) ^ ReadFromVec<u8>(inst, 1));
 			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) ^ ReadFromVec<u8>(inst, 1));
 			break;
 /*======================= Exclusive or operation(0x35) =======================*/
 		case Instruction::XOR_35:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			Xor_35(*this, &lendec.GetDecoderCtx(), inst);
 			break;
@@ -186,15 +186,13 @@ void Emulator::Run() {
 			break;
 /*======================= Test(0xA8) ===========================================*/
 		case Instruction::TEST_A8:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
 			break;
 /*======================= Test(0xA9) ===========================================*/
 		case Instruction::TEST_A9:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			if (lendec.GetDecoderCtx().osize == X86_Osize_16bit && inst.size() == 3)
 				SetLogicOpFlags(flags, GET_X_REG(Reg(Register::Rax)) & ReadFromVec<u16>(inst, 1));
@@ -205,8 +203,7 @@ void Emulator::Run() {
 			break;
 /*======================= Move instruction(0xB8) ===============================*/
 		case Instruction::MOV_B8:
-			if (!lendec.GetDecoderCtx().pfx_p_osize)
-				break;
+			EMU_CHECK_OP_SIZE(2);
 
 			if (lendec.GetDecoderCtx().osize == X86_Osize_16bit && inst.size() == 3)
 				SetReg(Register::Rax, ReadFromVec<u16>(inst, 1));
@@ -214,6 +211,17 @@ void Emulator::Run() {
 				SetReg(Register::Rax, ReadFromVec<u32>(inst, 1));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 9)
 				SetReg(Register::Rax, ReadFromVec<u64>(inst, 1));
+			break;
+		case Instruction::SUB_83:
+			EMU_CHECK_OP_SIZE(2);
+
+			Sub_83(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+/*======================= Move instruction(0x8B) ===============================*/
+		case Instruction::MOV_8B:
+			EMU_CHECK_OP_SIZE(2);
+
+			Mov_8B(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 		}
 /*========================================================================*/
