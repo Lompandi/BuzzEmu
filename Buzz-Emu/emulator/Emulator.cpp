@@ -53,7 +53,7 @@ void Emulator::SetReg(Register reg, u64 val) {
 void Emulator::Run() {
 	//Fetch the current instructions
 	Ldasm lendec;
-
+	
 	while(true) {
 		auto pc = Reg(Register::Rip);
 		std::vector<u8> inst;
@@ -63,10 +63,13 @@ void Emulator::Run() {
 		u32 opcode;//will opcode length variable?? we'll find out
 
 		u8 modrm;
-		if (lendec.GetDecoderCtx().p_modrm) {
-			if (lendec.GetDecoderCtx().pfx_p_rex)
-				inst.erase(inst.begin()); //exclude the rex byte, we will get it using the decode context
+		u8 erased = 0;
 
+		if (lendec.GetDecoderCtx().p_modrm) {
+			if (lendec.GetDecoderCtx().pfx_p_rex) {
+				inst.erase(inst.begin()); //exclude the rex byte, we will get it using the decode context
+				erased = 1;
+			}
 			std::copy(inst.begin(), inst.begin() + lendec.GetDecoderCtx().pos_modrm, &opcode);
 			modrm = lendec.GetDecoderCtx().modrm;
 		}
@@ -191,6 +194,7 @@ void Emulator::Run() {
 			default:
 				break;
 			}
+			break;
 		case Instruction::_83:
 			EMU_CHECK_OP_SIZE(2);
 
@@ -243,11 +247,15 @@ void Emulator::Run() {
 
 			Mov_8B(*this, &lendec.GetDecoderCtx(), inst);
 			break;
+		default:
+			std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+			return;
+			break;
 		}
 /*========================================================================*/
 
 		//Increment the rip to get next instruction
-		SetReg(Register::Rip, pc + inst.size());
+		SetReg(Register::Rip, pc + inst.size() + erased);
 	}
 }
 
