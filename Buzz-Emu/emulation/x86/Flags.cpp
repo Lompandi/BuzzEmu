@@ -112,3 +112,4 @@ void SetLogicOpFlags(FlagsRegister64& flags, u64 value) {
     flags.CF = 0; // Typically set based on arithmetic operations
     flags.OF = 0; // Overflow Flag, set based on arithmetic operations
 }
+

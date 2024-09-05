@@ -180,7 +180,32 @@ void Emulator::Run() {
 
 			Xor_35(*this, &lendec.GetDecoderCtx(), inst);
 			break;
+		case Instruction::_81:
+			EMU_CHECK_OP_SIZE(2);
 
+			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
+			{
+			case 0x00:
+				Add_81(*this, &lendec.GetDecoderCtx(), inst);
+				break;
+			default:
+				break;
+			}
+		case Instruction::_83:
+			EMU_CHECK_OP_SIZE(2);
+
+			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
+			{
+			case 0x00:
+				Add_83(*this, &lendec.GetDecoderCtx(), inst);
+				break;
+			case 0x05:
+				Sub_83(*this, &lendec.GetDecoderCtx(), inst);
+				break;
+			default:
+				break;
+			}
+			break;
 /*======================= No operation instruction =======================*/
 		case Instruction::NOP:
 			break;
@@ -211,11 +236,6 @@ void Emulator::Run() {
 				SetReg(Register::Rax, ReadFromVec<u32>(inst, 1));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 9)
 				SetReg(Register::Rax, ReadFromVec<u64>(inst, 1));
-			break;
-		case Instruction::SUB_83:
-			EMU_CHECK_OP_SIZE(2);
-
-			Sub_83(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= Move instruction(0x8B) ===============================*/
 		case Instruction::MOV_8B:

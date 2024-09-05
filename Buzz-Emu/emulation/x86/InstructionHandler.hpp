@@ -7,8 +7,11 @@
 #define BUZE_STANDARD_PARAM Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst
 
 //if memonic collides, the number will be its opcode
+//Addition
 void Add_01(BUZE_STANDARD_PARAM);
 void Add_03(BUZE_STANDARD_PARAM);
+void Add_81(BUZE_STANDARD_PARAM);
+void Add_83(BUZE_STANDARD_PARAM);
 //Logical AND
 void And_21(BUZE_STANDARD_PARAM);
 void And_25(BUZE_STANDARD_PARAM);
