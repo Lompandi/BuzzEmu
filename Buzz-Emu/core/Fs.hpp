@@ -1,5 +1,6 @@
 #pragma once
 
+#include <span>
 #include <string>
 #include <vector>
 #include <type_traits>
@@ -33,18 +34,13 @@ std::optional<u64> ReadU64FromVec(const std::vector<uint8_t>& vec, size_t size, 
 
 template <typename T>
 std::optional<T> ReadFromVec(const std::vector<uint8_t>& vec, size_t size, size_t offset) {
-    static_assert(std::is_trivially_copyable<T>::value, "Type T must be trivially copyable");
+    if (offset + size > vec.size() || size != sizeof(T)) {
+        return std::nullopt; 
+    }
 
-    if (offset >= vec.size() || size < sizeof(T)) 
-        return std::nullopt;
-
-    size_t bytes_to_copy = std::min(size, vec.size() - offset);
-    if (bytes_to_copy < sizeof(T)) 
-        return std::nullopt;
-
+    std::span<const uint8_t> span(vec.data() + offset, size);
     T value;
-    std::memcpy(&value, vec.data() + offset, sizeof(T));
-
+    std::memcpy(&value, span.data(), size);
     return value;
 }
 

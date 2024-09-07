@@ -20,6 +20,14 @@ enum Instruction : u32 {
 	XOR_33 = 0x33,
 	XOR_34 = 0x34,
 	XOR_35 = 0X35,
+	PUSH_50 = 0x50,
+	PUSH_51 = 0x51,
+	PUSH_52 = 0x52,
+	PUSH_53 = 0x53,
+	PUSH_54 = 0x54,
+	PUSH_55 = 0x55,
+	PUSH_56 = 0x56,
+	PUSH_57 = 0x57,
 	MOVSXD_63 = 0x63,
 	JZ_74 = 0x74,
 	JL_7C = 0x7C,
@@ -32,6 +40,7 @@ enum Instruction : u32 {
 	TEST_A8 = 0xA8,
 	TEST_A9 = 0xA9,
 	MOV_B8 = 0xB8,
+	CALL_E8 = 0xE8,
 	JMP_EB = 0xEB,
 };
 
@@ -82,7 +91,7 @@ sib_32,\
 sib_64\
 ) \
 void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {								\
-OperandSize opsize = ctx->osize;																		\
+OperandSize opsize = ctx->osize;	\
 																										\
 ModRM mod_rm;																							\
 Handle_ModRM(emu, ctx, mod_rm);																			\
@@ -190,12 +199,11 @@ void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) 
 OperandSize opsize = ctx->osize;																		\
 																										\
 ModRM mod_rm;																							\
-Handle_ModRM(emu, ctx, mod_rm);																			\
+Handle_ModRM(emu, ctx, mod_rm);														\
 																										\
-if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet)		\
-return;																									\
+																								\
 if (!ctx->p_sib) {																						\
-	if (!mod_rm.RM_Mod.IsPtr) { 													\
+	if (!mod_rm.RM_Mod.IsPtr && mod_rm.RM_Mod.RMRegSet) { 													\
 		if (opsize == OperandSize::X86_Osize_16bit) {													\
 			emu.SetReg(mod_rm.RM_Mod.reg, ##exp_reg16_imm);																\
 		}																								\
@@ -206,7 +214,7 @@ if (!ctx->p_sib) {																						\
 			emu.SetReg(mod_rm.RM_Mod.reg,##exp_reg64_imm);																		\
 		}																								\
 	}																									\
-	else if (!mod_rm.RM_Mod.disp) { 								\
+	else if (!mod_rm.RM_Mod.disp && mod_rm.RM_Mod.RMRegSet) { 								\
 		if (opsize == OperandSize::X86_Osize_16bit) {													\
 			emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val), ToByteVector(##exp_mem16_imm));														\
 		}																								\
@@ -217,7 +225,7 @@ if (!ctx->p_sib) {																						\
 			emu.memory.WriteFrom(mod_rm.RM_Mod.reg_val,	ToByteVector(##exp_mem64_imm));																	\
 		}																								\
 	}																									\
-	else if (mod_rm.RM_Mod.reg && mod_rm.RM_Mod.disp) { 			\
+	else if (mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) { 			\
 		s64 disp = ReadFromVec<s64>(inst, mod_rm.RM_Mod.disp, 2).value();								\
 																										\
 		if (opsize == OperandSize::X86_Osize_16bit) {													\
@@ -232,7 +240,23 @@ if (!ctx->p_sib) {																						\
 			emu.memory.WriteFrom(mod_rm.RM_Mod.reg_val + disp,											\
 				ToByteVector(##exp_memdisp64_imm));																	\
 		}																								\
-	}																									\
+	}		\
+	else if(!mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) {\
+		s64 disp = ReadFromVec<s64>(inst, mod_rm.RM_Mod.disp, 2).value();								\
+																										\
+		if (opsize == OperandSize::X86_Osize_16bit) {													\
+			emu.memory.WriteFrom(disp,								\
+				ToByteVector(##exp_memdisp16_imm));														\
+		}																								\
+		else if (opsize == OperandSize::X86_Osize_32bit) {												\
+			emu.memory.WriteFrom(disp,								\
+				ToByteVector(##exp_memdisp32_imm));														\
+		}																								\
+		else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {						\
+			emu.memory.WriteFrom(disp,											\
+				ToByteVector(##exp_memdisp64_imm));																	\
+		}		\
+	}																							\
 																			\
 }																										\
 else {																									\
@@ -404,7 +428,7 @@ sib_16,\
 sib_32,\
 sib_64\
 ) \
-void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) { \
+void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {\
 OperandSize opsize = ctx->osize; ModRM mod_rm; Handle_ModRM(emu, ctx, mod_rm); if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet) return; if (!ctx->p_sib) {				\
 	if (!mod_rm.RM_Mod.IsPtr) {																																				\
 		if (opsize == OperandSize::X86_Osize_16bit) {																														\

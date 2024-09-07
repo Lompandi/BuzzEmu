@@ -35,3 +35,7 @@ void Mov_8B(BUZE_STANDARD_PARAM);
 void Movsxd_63(BUZE_STANDARD_PARAM);
 //Logical compare
 void Test_85(BUZE_STANDARD_PARAM);
+//Push values onto the stack
+void Push_50_57(BUZE_STANDARD_PARAM);
+//Call procedure
+void Call_E8(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc);

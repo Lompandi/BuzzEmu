@@ -2,7 +2,7 @@
 #include "Sib.hpp"
 #include "ModRM.hpp"
 
-
+#include <iostream>
 #include "../../core/Fs.hpp"
 #include "InstructionHandler.hpp"
 
@@ -677,4 +677,28 @@ GET_EXT_REG(mod_rm.Reg.val)),
 TestAndSetFlags(emu.flags,
 emu.memory.Read<u64>(calc_offset).value(),
 mod_rm.Reg.val))
+#pragma endregion
+
+//TODO: probably add an method called "Push" in emu to assist the operation for pushing the values onto the stack
+#pragma region Push (0x50-0x57)
+void Push_50_57(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
+	emu.SetReg(Register::Rsp, emu.Reg(Register::Rsp) - 8);
+	if (!ctx->pfx_p_rex)
+		emu.memory.Write(emu.Reg(Register::Rsp), emu.Reg(static_cast<Register>(inst[0] - 0x50)));
+	else if (_REX_B(ctx->pfx_rex))
+		emu.memory.Write(emu.Reg(Register::Rsp), emu.Reg(static_cast<Register>((inst[0] - 0x50) + 8)));
+}		
+#pragma endregion
+
+#pragma region Call (0xE8)
+void Call_E8(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc) {
+	//Push the rip(add to next instruction after the call) onto the stack
+	//rip = rip + instruction size(set to next instruction)
+	emu.SetReg(Register::Rip, emu.Reg(Register::Rip) + inst.size());
+	emu.SetReg(Register::Rsp, emu.Reg(Register::Rsp) - 8);
+	emu.memory.Write(emu.Reg(Register::Rsp), emu.Reg(Register::Rip));
+
+	pc = emu.Reg(Register::Rip) + ReadFromVec<s32>(inst, 1) - inst.size(); //rel32
+	std::cout << "Setting rip to: 0x" << std::hex << pc << "\n";
+}
 #pragma endregion

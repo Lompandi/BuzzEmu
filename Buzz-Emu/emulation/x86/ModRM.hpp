@@ -16,7 +16,7 @@ using RmModArray = std::array<std::array<std::pair<std::optional<Register>, u8>,
 struct RegisterTraits {
 	bool		RMRegSet : 1;
 	bool		IsPtr : 1;
-	u8			disp : 6;
+	u8			disp;
 	Register	reg; //here
 	u64			reg_val;
 };
@@ -30,4 +30,5 @@ struct ModRM {
 
 extern const RmModArray rm_mod_mapping;
 
+void Clear_ModRM(ModRM* modrm);
 void Handle_ModRM(Emulator& emu, x86Dcctx* ctx, ModRM& modrm);
