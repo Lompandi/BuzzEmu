@@ -21,6 +21,7 @@ enum Instruction : u32 {
 	XOR_34 = 0x34,
 	XOR_35 = 0X35,
 	MOVSXD_63 = 0x63,
+	JZ_74 = 0x74,
 	JL_7C = 0x7C,
 	_81 = 0x81,
 	_83 = 0x83,

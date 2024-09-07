@@ -9,6 +9,10 @@
 
 #define EMU_CHECK_OP_SIZE(n) if (!lendec.GetDecoderCtx().pfx_p_osize || lendec.GetDecoderCtx().osize != ##n) \
 break
+#define INSTR_SIZE (inst.size() + erased)
+//use this aftrer jump to not affect the pc 
+#define JMP_CLEANUP inst.clear(); \
+erased = 0
 
 bool Emulator::LoadExecutable(const std::string& filename, const std::vector<Section>& sections) {
 
@@ -191,11 +195,21 @@ void Emulator::Run() {
 
 			Movsxd_63(*this, &lendec.GetDecoderCtx(), inst);
 			break;
+/*======================= Jump if zero (0x74) ================================*/
+		case Instruction::JZ_74:
+			EMU_CHECK_OP_SIZE(1);
+
+			//Signed-extended offset
+			SetReg(Register::Rip, Register::Rip + this->flags.ZF ? INSTR_SIZE + ReadFromVec<s8>(inst, 1) : 0);
+			JMP_CLEANUP;
+			break;
 /*======================= Jump if less (0x7C) ================================*/
 		case Instruction::JL_7C:
 			EMU_CHECK_OP_SIZE(1);
 
-			SetReg(Register::Rip, Register::Rip + this->flags.SF != this->flags.OF ? ReadFromVec<s8>(inst, 1) : 0);
+			//Signed-extended offset
+			SetReg(Register::Rip, Register::Rip + this->flags.SF != this->flags.OF ? INSTR_SIZE + ReadFromVec<s8>(inst, 1) : 0);
+			JMP_CLEANUP;
 			break;
 		case Instruction::_81:
 			EMU_CHECK_OP_SIZE(2);
@@ -280,7 +294,8 @@ void Emulator::Run() {
 		case Instruction::JMP_EB:
 			EMU_CHECK_OP_SIZE(1);
 
-			SetReg(Register::Rip, Register::Rip + static_cast<s64>(ReadFromVec<s8>(inst, 1)));
+			SetReg(Register::Rip, Register::Rip + INSTR_SIZE + static_cast<s64>(ReadFromVec<s8>(inst, 1)));
+			JMP_CLEANUP;
 			break;
 		default:
 			std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
@@ -290,7 +305,7 @@ void Emulator::Run() {
 /*========================================================================*/
 
 		//Increment the rip to get next instruction
-		SetReg(Register::Rip, pc + inst.size() + erased);
+		SetReg(Register::Rip, pc + INSTR_SIZE);
 	}
 }
 

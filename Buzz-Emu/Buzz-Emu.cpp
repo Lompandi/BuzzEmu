@@ -42,6 +42,8 @@ int main()
         .permission = PERM_READ
     };
 
+    
+
     std::vector<Section> load_segment = { text_section, rdata, data, tail_data };
 
     emu.LoadExecutable("C:\\Users\\USER\\source\\repos\\ConsoleApplication1\\x64\\Release\\ConsoleApplication1.exe", load_segment);
