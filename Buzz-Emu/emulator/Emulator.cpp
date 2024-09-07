@@ -50,6 +50,8 @@ void Emulator::SetReg(Register reg, u64 val) {
 	registers[reg] = val;
 }
 
+//TODO: jump currently only increment the offset by rel8 from current pc, 
+//but i need to change it to match pc + instruction length + rel8
 void Emulator::Run() {
 	//Fetch the current instructions
 	Ldasm lendec;
@@ -183,6 +185,18 @@ void Emulator::Run() {
 
 			Xor_35(*this, &lendec.GetDecoderCtx(), inst);
 			break;
+/*======================= Move with sign-extended (0x63) =====================*/
+		case Instruction::MOVSXD_63:
+			EMU_CHECK_OP_SIZE(2);
+
+			Movsxd_63(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+/*======================= Jump if less (0x7C) ================================*/
+		case Instruction::JL_7C:
+			EMU_CHECK_OP_SIZE(1);
+
+			SetReg(Register::Rip, Register::Rip + this->flags.SF != this->flags.OF ? ReadFromVec<s8>(inst, 1) : 0);
+			break;
 		case Instruction::_81:
 			EMU_CHECK_OP_SIZE(2);
 
@@ -206,9 +220,30 @@ void Emulator::Run() {
 			case 0x05:
 				Sub_83(*this, &lendec.GetDecoderCtx(), inst);
 				break;
+			case 0x07:
+				Cmp_83(*this, &lendec.GetDecoderCtx(), inst);
+				break;
 			default:
 				break;
 			}
+			break;
+/*======================= Logical Compare (0x85) ===============================*/
+		case Instruction::TEST_85:
+			EMU_CHECK_OP_SIZE(2);
+
+			Test_85(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+/*======================= Move instruction(0x89) ===============================*/
+		case Instruction::MOV_89:
+			EMU_CHECK_OP_SIZE(2);
+
+			Mov_89(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+/*======================= Move instruction(0x8B) ===============================*/
+		case Instruction::MOV_8B:
+			EMU_CHECK_OP_SIZE(2);
+
+			Mov_8B(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= No operation instruction =======================*/
 		case Instruction::NOP:
@@ -241,11 +276,11 @@ void Emulator::Run() {
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 9)
 				SetReg(Register::Rax, ReadFromVec<u64>(inst, 1));
 			break;
-/*======================= Move instruction(0x8B) ===============================*/
-		case Instruction::MOV_8B:
-			EMU_CHECK_OP_SIZE(2);
+/*======================= Jump short (0xEB) ====================================*/
+		case Instruction::JMP_EB:
+			EMU_CHECK_OP_SIZE(1);
 
-			Mov_8B(*this, &lendec.GetDecoderCtx(), inst);
+			SetReg(Register::Rip, Register::Rip + static_cast<s64>(ReadFromVec<s8>(inst, 1)));
 			break;
 		default:
 			std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";

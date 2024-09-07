@@ -512,6 +512,28 @@ INSTRUCTION_OP2_RM(Xor, 33,
 INSTRUCTION_LOGICAL_AX_IMM(Xor, 35, ^)
 #pragma endregion
 
+#pragma region Mov (0x89)
+INSTRUCTION_OP2_MR(Mov, 89, 
+GET_X_REG(mod_rm.Reg.val),
+GET_EXT_REG(mod_rm.Reg.val),
+mod_rm.Reg.val,
+
+GET_X_REG(mod_rm.Reg.val),
+GET_EXT_REG(mod_rm.Reg.val),
+mod_rm.Reg.val,
+
+GET_X_REG(mod_rm.Reg.val),
+GET_EXT_REG(mod_rm.Reg.val),
+mod_rm.Reg.val,
+
+GET_X_REG(mod_rm.Reg.val),
+GET_EXT_REG(mod_rm.Reg.val),
+mod_rm.Reg.val,
+
+GET_X_REG(mod_rm.Reg.val),
+GET_EXT_REG(mod_rm.Reg.val),
+mod_rm.Reg.val)
+#pragma endregion
 #pragma region Mov (0x8B)
 INSTRUCTION_OP2_RM(Mov, 8B, 
 
@@ -536,3 +558,123 @@ emu.memory.Read<u32>(calc_offset).value(),
 emu.memory.Read<u64>(calc_offset).value())
 #pragma endregion
 
+#pragma region Movsxd (0x63)
+INSTRUCTION_OP2_RM(Movsxd, 63,
+GET_X_REG(mod_rm.RM_Mod.reg_val),
+GET_EXT_REG(mod_rm.RM_Mod.reg_val),
+static_cast<u64>(GET_EXT_REG(mod_rm.RM_Mod.reg_val)),
+
+emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val)).value(),
+emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val)).value(),
+static_cast<u64>(emu.memory.Read<u32>(mod_rm.RM_Mod.reg_val).value()),
+
+emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
+emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
+static_cast<u64>(emu.memory.Read<u32>(mod_rm.RM_Mod.reg_val + disp).value()),
+
+emu.memory.Read<u16>(calc_offset + disp).value(),
+emu.memory.Read<u32>(calc_offset + disp).value(),
+static_cast<u64>(emu.memory.Read<u32>(calc_offset + disp).value()),
+
+emu.memory.Read<u16>(calc_offset).value(),
+emu.memory.Read<u32>(calc_offset).value(),
+static_cast<u64>(emu.memory.Read<u32>(calc_offset).value()))
+#pragma endregion
+
+#pragma region Cmp (0x83)
+INSTRUCTION_OP2_MI(Cmp, 83, 
+CmpAndSetFlags(emu.flags,
+GET_X_REG(mod_rm.RM_Mod.reg_val),
+static_cast<u16>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+GET_EXT_REG(mod_rm.RM_Mod.reg_val),
+static_cast<u32>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+mod_rm.RM_Mod.reg_val,
+static_cast<u64>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val)).value(),
+static_cast<u16>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val)).value(),
+static_cast<u32>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val).value(),
+static_cast<u64>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
+static_cast<u16>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
+static_cast<u32>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val + disp).value(),
+static_cast<u64>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u16>(calc_offset + disp).value(),
+static_cast<u16>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u32>(calc_offset + disp).value(),
+static_cast<u32>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u64>(calc_offset + disp).value(),
+static_cast<u64>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u16>(calc_offset).value(),
+static_cast<u16>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u32>(calc_offset).value(),
+static_cast<u32>(ReadFromVec<u8>(inst, 2))),
+CmpAndSetFlags(emu.flags,
+emu.memory.Read<u64>(calc_offset).value(),
+static_cast<u64>(ReadFromVec<u8>(inst, 2))))
+#pragma endregion
+
+#pragma region Test (0x85)
+INSTRUCTION_OP2_MR(Test, 85, 
+TestAndSetFlags(emu.flags,
+GET_X_REG(mod_rm.RM_Mod.reg_val),
+GET_X_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+GET_EXT_REG(mod_rm.RM_Mod.reg_val),
+GET_EXT_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+mod_rm.RM_Mod.reg_val,
+mod_rm.Reg.val),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val)).value(),
+GET_X_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val)).value(),
+GET_EXT_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val).value(),
+mod_rm.Reg.val),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
+GET_X_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
+GET_EXT_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val + disp).value(),
+mod_rm.Reg.val),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u16>(calc_offset + disp).value(),
+GET_X_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u32>(calc_offset + disp).value(),
+GET_EXT_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u64>(calc_offset + disp).value(),
+mod_rm.Reg.val),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u16>(calc_offset).value(),
+GET_X_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u32>(calc_offset).value(),
+GET_EXT_REG(mod_rm.Reg.val)),
+TestAndSetFlags(emu.flags,
+emu.memory.Read<u64>(calc_offset).value(),
+mod_rm.Reg.val))
+#pragma endregion

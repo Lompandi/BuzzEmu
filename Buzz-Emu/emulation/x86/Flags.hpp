@@ -69,5 +69,8 @@ u64 XorAndSetFlags(FlagsRegister64& flags, u64 dst, u64 src);
 u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend);
 u64 AddAndSetFlags(FlagsRegister64& flags, u64 operand1, u64 operand2);
 
+u64 CmpAndSetFlags(FlagsRegister64& flags, uint64_t src1, uint64_t src2);
+
+u64 TestAndSetFlags(FlagsRegister64& flags, u64 src1, u64 src2);
 
 void SetLogicOpFlags(FlagsRegister64& flags, u64 value);

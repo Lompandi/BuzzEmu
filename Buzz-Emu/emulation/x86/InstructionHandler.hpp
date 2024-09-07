@@ -24,10 +24,14 @@ void Xor_31(BUZE_STANDARD_PARAM);
 void Xor_33(BUZE_STANDARD_PARAM);
 void Xor_35(BUZE_STANDARD_PARAM);
 //Compare two operands
-
+void Cmp_83(BUZE_STANDARD_PARAM);
 //Logical OR
 void Or_09(BUZE_STANDARD_PARAM);
 void Or_0D(BUZE_STANDARD_PARAM);
-
 //Move
+void Mov_89(BUZE_STANDARD_PARAM);
 void Mov_8B(BUZE_STANDARD_PARAM);
+//Move signed extended
+void Movsxd_63(BUZE_STANDARD_PARAM);
+//Logical compare
+void Test_85(BUZE_STANDARD_PARAM);

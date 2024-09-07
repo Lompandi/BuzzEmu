@@ -20,13 +20,18 @@ enum Instruction : u32 {
 	XOR_33 = 0x33,
 	XOR_34 = 0x34,
 	XOR_35 = 0X35,
+	MOVSXD_63 = 0x63,
+	JL_7C = 0x7C,
 	_81 = 0x81,
 	_83 = 0x83,
+	TEST_85 = 0x85,
+	MOV_89 = 0x89,
 	MOV_8B = 0x8B,
 	NOP = 0x90,
 	TEST_A8 = 0xA8,
 	TEST_A9 = 0xA9,
 	MOV_B8 = 0xB8,
+	JMP_EB = 0xEB,
 };
 
 #define GET_L_REG(r) static_cast<u8>(r & 0xFF)

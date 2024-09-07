@@ -20,7 +20,7 @@ const RmModArray rm_mod_mapping = {
 	//R/M = 011
 	MakeModArray(Register::Rbx),
 	//TODO R/M = 100
-	MakeModArray(Register::Rbx),
+	MakeModArray(Register::Rsp),
 	//R/M = 101
 	{ {
 		{std::nullopt, 32},

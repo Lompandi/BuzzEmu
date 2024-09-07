@@ -113,3 +113,48 @@ void SetLogicOpFlags(FlagsRegister64& flags, u64 value) {
     flags.OF = 0; // Overflow Flag, set based on arithmetic operations
 }
 
+//Cmp one, two
+u64 CmpAndSetFlags(FlagsRegister64& flags, uint64_t src1, uint64_t src2) {
+    // Perform the subtraction
+    uint64_t result = src1 - src2;
+
+    // Set the Carry Flag (CF)
+    flags.CF = (src1 < src2) ? 1 : 0;
+
+    // Set the Overflow Flag (OF)
+    bool signMinuend = (src1 & 0x8000000000000000) != 0;
+    bool signSubtrahend = (src2 & 0x8000000000000000) != 0;
+    bool signResult = (result & 0x8000000000000000) != 0;
+    flags.OF = (signMinuend != signSubtrahend && signResult != signMinuend) ? 1 : 0;
+
+    // Set the Zero Flag (ZF)
+    flags.ZF = (result == 0) ? 1 : 0;
+
+    // Set the Sign Flag (SF)
+    flags.SF = (result & 0x8000000000000000) ? 1 : 0;
+
+    // Set the Parity Flag (PF)
+    uint64_t ones = popcountll(result);
+    flags.PF = (ones % 2 == 0) ? 1 : 0; // Even parity
+
+    flags.AF = 0;
+    for (int i = 0; i < 8; ++i) {
+        uint8_t byteMinuend = (src1 >> (i * 8)) & 0xFF;
+        uint8_t byteSubtrahend = (src2 >> (i * 8)) & 0xFF;
+        uint8_t byteResult = (result >> (i * 8)) & 0xFF;
+
+        if (((byteMinuend & 0x0F) < (byteSubtrahend & 0x0F)) ||
+            ((byteMinuend & 0xF0) < (byteSubtrahend & 0xF0))) {
+            flags.AF = 1;
+            break;
+        }
+    }
+
+    return src1;//return original, not setting the register
+}
+
+u64 TestAndSetFlags(FlagsRegister64& flags, u64 src1, u64 src2) {
+    u64 result = src1 & src2;
+    SetLogicOpFlags(flags, result);
+    return src1; //return original, not changine the register
+}

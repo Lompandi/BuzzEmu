@@ -12,9 +12,8 @@ std::vector<uint8_t> get_range(const std::vector<uint8_t>& vec, std::size_t offs
 
 template<typename T>
 T ReadFromVec(const std::vector<u8>& vec, size_t offset) {
-    T result;
-    std::memcpy(&result, vec.data() + offset, sizeof(T));
-    return result;
+    static_assert(std::is_trivially_copyable<T>::value, "Type T must be trivially copyable");
+    return *reinterpret_cast<const T*>(vec.data() + offset);
 }
 
 template <typename T>
