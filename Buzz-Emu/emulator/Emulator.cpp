@@ -88,6 +88,8 @@ void Emulator::Run() {
 	u64 debug_instr_count = 0;
 
 	while(true) {
+		CrashDump(*this);
+
 		auto pc = Reg(Register::Rip);
 		std::cout << "[EMU] Executing instruction at 0x" << std::hex << pc;
 		std::vector<u8> inst;

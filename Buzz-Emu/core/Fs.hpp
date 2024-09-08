@@ -33,15 +33,34 @@ std::vector<uint8_t> ToByteVector(T value) {
 std::optional<u64> ReadU64FromVec(const std::vector<uint8_t>& vec, size_t size, size_t offset);
 
 template <typename T>
-std::optional<T> ReadFromVec(const std::vector<uint8_t>& vec, size_t size_bit, size_t offset) {
+std::optional<T> ReadDispFromVec(const std::vector<uint8_t>& vec, size_t size_bit, size_t offset) {
     size_t size = size_bit >> 3; // Convert bits to bytes
 
-    std::cout << "ReadFromVec(): size " << size << "\n";
-    if (offset + size > vec.size() || size > sizeof(T)) 
-        return std::nullopt; 
-    return (T)(*(vec.data() + offset));
-}
+    std::cout << "ReadDispFromVec(): size " << size << "\n";
 
+    if (offset + size > vec.size() || size > sizeof(T)) {
+        return std::nullopt;
+    }
+
+    T data = 0;
+
+    if (size == 1) {
+        data = static_cast<T>(*reinterpret_cast<const uint8_t*>(vec.data() + offset));
+    }
+    else if (size == 2) {
+        data = static_cast<T>(*reinterpret_cast<const uint16_t*>(vec.data() + offset));
+    }
+    else if (size == 4) {
+        data = static_cast<T>(*reinterpret_cast<const uint32_t*>(vec.data() + offset));
+    }
+    else {
+        return std::nullopt;
+    }
+
+    std::cout << "\ndisplacement: 0x" << std::hex << data << "\n";
+
+    return data;
+}
 template <typename T>
 T CastFromVec(const std::vector<uint8_t>& vec, size_t offset) {
     return *reinterpret_cast<const T*>(vec.data() + offset);
