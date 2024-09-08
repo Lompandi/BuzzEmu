@@ -14,7 +14,7 @@ constexpr std::array<std::pair<std::optional<Register>, u8>, 4> MakeModArray(Reg
 
 constexpr std::array<std::pair<std::optional<Register>, u8>, 4> MakeRm101Array(Register reg) {
 	return { {
-		{std::nullopt, 0},
+		{std::nullopt, 32},
 		{reg, 8},
 		{reg, 32},
 		{reg, 0}
@@ -90,7 +90,7 @@ void Handle_ModRM(Emulator& emu, x86Dcctx* ctx, ModRM& modrm) {
     // Handle the displacement if present and log
     if (val.second) {
         modrm.RM_Mod.disp = val.second; // Displacement
-        DEBUG_LOG("Displacement: " << std::hex << modrm.RM_Mod.disp);
+        DEBUG_LOG("Displacement: " << std::hex << (int)modrm.RM_Mod.disp);
     }
     else {
         DEBUG_LOG("No displacement value found in ModRM");

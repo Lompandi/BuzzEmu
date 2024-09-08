@@ -33,15 +33,18 @@ std::vector<uint8_t> ToByteVector(T value) {
 std::optional<u64> ReadU64FromVec(const std::vector<uint8_t>& vec, size_t size, size_t offset);
 
 template <typename T>
-std::optional<T> ReadFromVec(const std::vector<uint8_t>& vec, size_t size, size_t offset) {
-    if (offset + size > vec.size() || size != sizeof(T)) {
-        return std::nullopt; 
-    }
+std::optional<T> ReadFromVec(const std::vector<uint8_t>& vec, size_t size_bit, size_t offset) {
+    size_t size = size_bit >> 3; // Convert bits to bytes
 
-    std::span<const uint8_t> span(vec.data() + offset, size);
-    T value;
-    std::memcpy(&value, span.data(), size);
-    return value;
+    std::cout << "ReadFromVec(): size " << size << "\n";
+    if (offset + size > vec.size() || size > sizeof(T)) 
+        return std::nullopt; 
+    return (T)(*(vec.data() + offset));
+}
+
+template <typename T>
+T CastFromVec(const std::vector<uint8_t>& vec, size_t offset) {
+    return *reinterpret_cast<const T*>(vec.data() + offset);
 }
 
 uint64_t ReadFromU64(uint64_t value, uint8_t size);

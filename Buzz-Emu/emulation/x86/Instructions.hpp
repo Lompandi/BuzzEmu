@@ -42,6 +42,7 @@ enum Instruction : u32 {
 	MOV_B8 = 0xB8,
 	CALL_E8 = 0xE8,
 	JMP_EB = 0xEB,
+	_FF = 0xFF,
 };
 
 #define GET_L_REG(r) static_cast<u8>(r & 0xFF)
@@ -99,7 +100,7 @@ Handle_ModRM(emu, ctx, mod_rm);																			\
 if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet)		\
 return;																									\
 if (!ctx->p_sib) {																						\
-	if (!mod_rm.RM_Mod.IsPtr) { 													\
+	if (!mod_rm.RM_Mod.IsPtr && mod_rm.RM_Mod.RMRegSet) { 													\
 		if (opsize == OperandSize::X86_Osize_16bit) {													\
 			emu.SetReg(mod_rm.RM_Mod.reg, ##exp_2reg16);																\
 		}																								\
@@ -121,7 +122,7 @@ if (!ctx->p_sib) {																						\
 			emu.memory.WriteFrom(mod_rm.RM_Mod.reg_val,	ToByteVector(##exp_mem_reg64));																	\
 		}																								\
 	}																									\
-	else if (mod_rm.RM_Mod.reg && mod_rm.RM_Mod.disp) { 			\
+	else if (mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) { 			\
 		s64 disp = ReadFromVec<s64>(inst, mod_rm.RM_Mod.disp, 2).value();								\
 																										\
 		if (opsize == OperandSize::X86_Osize_16bit) {													\
@@ -145,6 +146,7 @@ else {																									\
 	HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);\
 	if (!sib_byte.valid)\
 		return;	\
+	std::cout << "entering sib proccessing...\n";\
 																										\
 	if (mod_rm.RM_Mod.disp) { 													\
 		s64 disp = ReadFromVec<s64>(inst, mod_rm.RM_Mod.disp, 3).value();								\
@@ -201,7 +203,8 @@ OperandSize opsize = ctx->osize;																		\
 ModRM mod_rm;																							\
 Handle_ModRM(emu, ctx, mod_rm);														\
 																										\
-																								\
+if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet)		\
+return;	\
 if (!ctx->p_sib) {																						\
 	if (!mod_rm.RM_Mod.IsPtr && mod_rm.RM_Mod.RMRegSet) { 													\
 		if (opsize == OperandSize::X86_Osize_16bit) {													\
@@ -429,8 +432,8 @@ sib_32,\
 sib_64\
 ) \
 void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {\
-OperandSize opsize = ctx->osize; ModRM mod_rm; Handle_ModRM(emu, ctx, mod_rm); if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet) return; if (!ctx->p_sib) {				\
-	if (!mod_rm.RM_Mod.IsPtr) {																																				\
+OperandSize opsize = ctx->osize; ModRM mod_rm; Handle_ModRM(emu, ctx, mod_rm); if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet) return;if (!ctx->p_sib) {				\
+	if (!mod_rm.RM_Mod.IsPtr && mod_rm.RM_Mod.RMRegSet) {																																				\
 		if (opsize == OperandSize::X86_Osize_16bit) {																														\
 			emu.SetReg(mod_rm.Reg.reg, ##exp_2reg16);				\
 		}																																									\
@@ -452,7 +455,7 @@ OperandSize opsize = ctx->osize; ModRM mod_rm; Handle_ModRM(emu, ctx, mod_rm); i
 			emu.SetReg(mod_rm.Reg.reg, ##exp_mem_reg64);																 \
 		}																																															 \
 	}																																																 \
-	else if (mod_rm.RM_Mod.reg && mod_rm.RM_Mod.disp) {																																				 \
+	else if (mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) {																																				 \
 		s64 disp = ReadFromVec<s64>(inst, mod_rm.RM_Mod.disp, 2).value(); if (opsize == OperandSize::X86_Osize_16bit) {																				 \
 			emu.SetReg(mod_rm.Reg.reg, ##exp_memdisp_reg16); \
 		}																																															 \
@@ -464,7 +467,8 @@ OperandSize opsize = ctx->osize; ModRM mod_rm; Handle_ModRM(emu, ctx, mod_rm); i
 		}																																																	\
 	}																																																		\
 }																																																			\
-else {																																																		\
+else {											\
+	std::cout << "Entering SIB procession...\n";																																							\
 	Sib sib_byte;u64 calc_offset = 0;HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);if(!sib_byte.valid) return; if (mod_rm.RM_Mod.disp) {																												\
 		s64 disp = ReadFromVec<s64>(inst, mod_rm.RM_Mod.disp, 3).value(); if (opsize == OperandSize::X86_Osize_16bit) {																						\
 			emu.SetReg(mod_rm.Reg.reg, ##sib_disp_16);\

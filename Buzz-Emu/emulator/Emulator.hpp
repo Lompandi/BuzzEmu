@@ -8,6 +8,8 @@
 #include "../emulation/x86/Flags.hpp"
 #include "../emulation/x86/Register.hpp"
 
+#define DEBUG_FUNC 
+
 //All the state of the emulated system
 class Emulator {
 public:

@@ -54,14 +54,42 @@ void Emulator::SetReg(Register reg, u64 val) {
 	registers[reg] = val;
 }
 
+void DEBUG_FUNC CrashDump(Emulator& emu) {
+	//dump general pourpose registers
+	std::cout << "RAX: 0x" << std::hex << emu.Reg(Register::Rax);
+	std::cout << " RCX: 0x" << std::hex << emu.Reg(Register::Rcx) << "\n";
+	std::cout << "RDX: 0x" << std::hex << emu.Reg(Register::Rdx);
+	std::cout << " RBX: 0x" << std::hex << emu.Reg(Register::Rbx) << "\n";
+	std::cout << "RSP: 0x" << std::hex << emu.Reg(Register::Rsp);
+	std::cout << " RBP: 0x" << std::hex << emu.Reg(Register::Rbp) << "\n";
+	std::cout << "RSI: 0x" << std::hex << emu.Reg(Register::Rsi);
+	std::cout << " RDI: 0x" << std::hex << emu.Reg(Register::Rdi) << "\n\n";
+
+	//dump Cpu flags
+	std::cout << "CF: " << std::hex <<emu.flags.CF; // Carry Flag
+	std::cout << " PF: " << std::hex <<emu.flags.PF; // Parity Flag
+	std::cout << " AF: " << std::hex <<emu.flags.AF; // Auxiliary Carry Flag
+	std::cout << " ZF: " << std::hex <<emu.flags.ZF << "\n"; // Zero Flag
+	std::cout << "SF: " << std::hex <<emu.flags.SF; // Sign Flag
+	std::cout << " TF: " << std::hex <<emu.flags.TF; // Trap Flag
+	std::cout << " IF: " << std::hex <<emu.flags.IF; // Interrupt Enable Flag
+	std::cout << " DF: " << std::hex <<emu.flags.DF << "\n"; // Direction Flag
+	std::cout << "OF: " << std::hex <<emu.flags.OF << "\n\n"; // Overflow Flag
+
+	//dump pc
+	std::cout << "Crash at: 0x" << std::hex << emu.Reg(Register::Rip) << "\n\n";
+}
+
 //TODO: jump currently only increment the offset by rel8 from current pc, 
 //but i need to change it to match pc + instruction length + rel8
 void Emulator::Run() {
 	Ldasm lendec;
 
+	u64 debug_instr_count = 0;
+
 	while(true) {
 		auto pc = Reg(Register::Rip);
-		std::cout << "[EMU] Executing instruction at 0x" << pc;
+		std::cout << "[EMU] Executing instruction at 0x" << std::hex << pc;
 		std::vector<u8> inst;
 
 		//Fetch the current instructions
@@ -77,6 +105,9 @@ void Emulator::Run() {
 			inst.erase(inst.begin()); //exclude the rex byte, we will get it using the decode context
 			erased = 1;
 		}
+		
+		if (lendec.GetDecoderCtx().p_sib)
+			std::cout << " have SIB";
 
 		if (lendec.GetDecoderCtx().p_modrm) {
 			std::cout << " and ModR/M";
@@ -220,18 +251,17 @@ void Emulator::Run() {
 /*======================= Jump if zero (0x74) ================================*/
 		case Instruction::JZ_74:
 			
-
 			//Signed-extended offset
-			SetReg(Register::Rip, Register::Rip + this->flags.ZF ? instr_size + ReadFromVec<s8>(inst, 1) : 0);
-			jmp_cleanup;
+			pc = Reg(Register::Rip) + (this->flags.ZF ? ReadFromVec<s8>(inst, 1) : 0);
 			break;
 /*======================= Jump if less (0x7C) ================================*/
 		case Instruction::JL_7C:
 			
 
 			//Signed-extended offset
-			SetReg(Register::Rip, Register::Rip + this->flags.SF != this->flags.OF ? instr_size + ReadFromVec<s8>(inst, 1) : 0);
-			jmp_cleanup;
+			pc = Reg(Register::Rip) + (this->flags.SF != this->flags.OF ? ReadFromVec<s8>(inst, 1) : 0);
+			std::cout << "JL Rel8: 0x" << std::hex << (int)ReadFromVec<s8>(inst, 1) << "\n";
+			std::cout << "Pc after JL: 0x" << std::hex << pc << "\n";
 			break;
 		case Instruction::_81:
 			
@@ -314,8 +344,6 @@ void Emulator::Run() {
 			break;
 /*============================ Call procedure (0xE8) ===========================*/
 		case Instruction::CALL_E8:
-			
-
 			std::cout << "Calling functions\n";
 
 			Call_E8(*this, &lendec.GetDecoderCtx(), inst, pc);
@@ -323,17 +351,28 @@ void Emulator::Run() {
 /*======================= Jump short (0xEB) ====================================*/
 		case Instruction::JMP_EB:
 			
-
-			SetReg(Register::Rip, Register::Rip + instr_size + static_cast<s64>(ReadFromVec<s8>(inst, 1)));
-			jmp_cleanup;
+			pc = Reg(Register::Rip) + static_cast<s64>(ReadFromVec<s8>(inst, 1));
+			break;
+		case Instruction::_FF:
+			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
+			{
+			case 0x02:
+				Call_FF_reg2(*this, &lendec.GetDecoderCtx(), inst, pc);
+				break;
+			default:
+				break;
+			}
 			break;
 		default:
-			std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+			std::cout << "\n[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+			std::cout << "[EMU] " << std::dec << debug_instr_count << " instructions executed before crashing.\n\n";
+			CrashDump(*this);
 			return;
 			break;
 		}
 /*========================================================================*/
 		//Increment the rip to get next instruction
+		debug_instr_count++;
 		SetReg(Register::Rip, pc + instr_size);
 	}
 }

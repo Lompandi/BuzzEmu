@@ -39,3 +39,4 @@ void Test_85(BUZE_STANDARD_PARAM);
 void Push_50_57(BUZE_STANDARD_PARAM);
 //Call procedure
 void Call_E8(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc);
+void Call_FF_reg2(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc);
