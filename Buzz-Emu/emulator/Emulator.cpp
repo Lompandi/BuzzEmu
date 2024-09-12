@@ -14,6 +14,8 @@
 #define jmp_cleanup inst.clear(); \
 erased = 0
 
+//TUTORIAL AT: https://youtu.be/iM3s8-umRO0?t=28749 
+
 bool Emulator::LoadExecutable(const std::string& filename, const std::vector<Section>& sections) {
 
 	//Read the input file
@@ -178,17 +180,17 @@ void Emulator::Run() {
 /*======================= Subtract(0x2C) =====================================*/
 		case Instruction::SUB_2C:
 			
-			SetReg(Register::Rax, SubAndSetFlags(flags, GET_L_REG(Reg(Register::Rax)), ReadFromVec<u8>(inst, 1)));
+			SetReg(Register::Rax, SubAndSetFlags(GET_L_REG(Reg(Register::Rax)), ReadFromVec<u8>(inst, 1), flags));
 			break;
 /*======================= Subtract(0x2D) =====================================*/
 		case Instruction::SUB_2D:
 			
 			if (lendec.GetDecoderCtx().osize == X86_Osize_16bit && inst.size() == 3)
-				SetReg(Register::Rax, SubAndSetFlags(flags, GET_X_REG(Reg(Register::Rax)), ReadFromVec<u16>(inst, 1)));
+				SetReg(Register::Rax, SubAndSetFlags(GET_X_REG(Reg(Register::Rax)), ReadFromVec<u16>(inst, 1), flags));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_32bit && inst.size() == 5)
-				SetReg(Register::Rax, SubAndSetFlags(flags, GET_EXT_REG(Reg(Register::Rax)), ReadFromVec<u32>(inst, 1)));
+				SetReg(Register::Rax, SubAndSetFlags(GET_EXT_REG(Reg(Register::Rax)), ReadFromVec<u32>(inst, 1), flags));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 5)
-				SetReg(Register::Rax, SubAndSetFlags(flags, Reg(Register::Rax), static_cast<u64>(ReadFromVec<u32>(inst, 1))));
+				SetReg(Register::Rax, SubAndSetFlags(Reg(Register::Rax), static_cast<u64>(ReadFromVec<u32>(inst, 1)), flags));
 			break;
 /*======================= Exclusive or operation(0x31) =======================*/
 		case Instruction::XOR_31:
@@ -266,27 +268,41 @@ void Emulator::Run() {
 			std::cout << "Pc after JL: 0x" << std::hex << pc << "\n";
 			break;
 		case Instruction::_81:
-			
-
 			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
 			{
 			case 0x00:
 				Add_81(*this, &lendec.GetDecoderCtx(), inst);
+				break;
+			case 0x04:
+				And_81(*this, &lendec.GetDecoderCtx(), inst);
+				break;
+			case 0x05:
+				Sub_81(*this, &lendec.GetDecoderCtx(), inst);
+				break;
+			case 0x06:
+				Xor_81(*this, &lendec.GetDecoderCtx(), inst);
 				break;
 			default:
 				break;
 			}
 			break;
 		case Instruction::_83:
-			
-
 			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
 			{
 			case 0x00:
 				Add_83(*this, &lendec.GetDecoderCtx(), inst);
 				break;
+			case 0x01:
+				Or_83(*this, &lendec.GetDecoderCtx(), inst);
+				break;
+			case 0x04:
+				And_83(*this, &lendec.GetDecoderCtx(), inst);
+				break;
 			case 0x05:
 				Sub_83(*this, &lendec.GetDecoderCtx(), inst);
+				break;
+			case 0x06:
+				Xor_83(*this, &lendec.GetDecoderCtx(), inst);
 				break;
 			case 0x07:
 				Cmp_83(*this, &lendec.GetDecoderCtx(), inst);

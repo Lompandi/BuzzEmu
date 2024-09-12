@@ -52,6 +52,49 @@ u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend
     return result;
 }
 
+//overload func 2:
+u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, FlagsRegister64& flags) {
+    // Perform the subtraction
+    uint64_t result = minuend - subtrahend;
+
+    // Set the Carry Flag (CF)
+    flags.CF = (minuend < subtrahend) ? 1 : 0;
+
+    // Set the Overflow Flag (OF)
+    bool signMinuend = (minuend & 0x8000000000000000) != 0;
+    bool signSubtrahend = (subtrahend & 0x8000000000000000) != 0;
+    bool signResult = (result & 0x8000000000000000) != 0;
+    flags.OF = (signMinuend != signSubtrahend && signResult != signMinuend) ? 1 : 0;
+
+    // Set the Zero Flag (ZF)
+    flags.ZF = (result == 0) ? 1 : 0;
+
+    // Set the Sign Flag (SF)
+    flags.SF = (result & 0x8000000000000000) ? 1 : 0;
+
+    // Set the Parity Flag (PF)
+    uint64_t ones = popcountll(result);
+    flags.PF = (ones % 2 == 0) ? 1 : 0; // Even parity
+
+    // Set the Auxiliary Carry Flag (AF)
+    // AF is set if there is a borrow from the lower nibble to the upper nibble in any byte of the result
+    flags.AF = 0;
+    for (int i = 0; i < 8; ++i) {
+        uint8_t byteMinuend = (minuend >> (i * 8)) & 0xFF;
+        uint8_t byteSubtrahend = (subtrahend >> (i * 8)) & 0xFF;
+        uint8_t byteResult = (result >> (i * 8)) & 0xFF;
+
+        // Check if there is a borrow between the lower and upper nibbles
+        if (((byteMinuend & 0x0F) < (byteSubtrahend & 0x0F)) ||
+            ((byteMinuend & 0xF0) < (byteSubtrahend & 0xF0))) {
+            flags.AF = 1;
+            break;
+        }
+    }
+
+    return result;
+}
+
 /*return = operand1 + operand2*/
 u64 AddAndSetFlags(FlagsRegister64& flags, u64 operand1, u64 operand2) {
     u64 result = operand1 + operand2;
@@ -93,12 +136,23 @@ u64 AddAndSetFlags(FlagsRegister64& flags, u64 operand1, u64 operand2) {
     return result;
 }
 
-u64 XorAndSetFlags(FlagsRegister64& flags, u64 dst, u64 src) {
+u64 XorAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags) {
     auto result = dst ^ src;
     SetLogicOpFlags(flags, result);
     return result;
 }
 
+u64 AndAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags) {
+    auto result = dst & src;
+    SetLogicOpFlags(flags, result);
+    return result;
+}
+
+u64 OrAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags) {
+    auto result = dst | src;
+    SetLogicOpFlags(flags, result);
+    return result;
+}
 
 void SetLogicOpFlags(FlagsRegister64& flags, u64 value) {
     flags.ZF = (value == 0) ? 1 : 0;

@@ -66,6 +66,8 @@ void Handle_ModRM(Emulator& emu, x86Dcctx* ctx, ModRM& modrm) {
         return;
     }
 
+    std::cout << "opsize: " << (u8)ctx->osize << "\n";
+
     // Extract and log the register part from ModRM byte
     modrm.Reg.reg = static_cast<Register>(MODRM_REG(ctx->modrm));
     modrm.Reg.val = emu.Reg(modrm.Reg.reg);

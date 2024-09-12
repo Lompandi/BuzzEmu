@@ -11,3 +11,7 @@ using s8 = int8_t;
 using s16 = int16_t;
 using s32 = int32_t;
 using s64 = int64_t;
+
+using imm8 = u8;
+using imm16 = u16;
+using imm32 = u32;

@@ -64,9 +64,13 @@ struct FlagsRegister64 {
 //we need it!
 unsigned long long popcountll(unsigned long long x);
 
-u64 XorAndSetFlags(FlagsRegister64& flags, u64 dst, u64 src);
+u64 XorAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
+u64 AndAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
+u64 OrAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
 
-u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend);
+//u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend);
+u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, FlagsRegister64& flags);
+
 u64 AddAndSetFlags(FlagsRegister64& flags, u64 operand1, u64 operand2);
 
 u64 CmpAndSetFlags(FlagsRegister64& flags, uint64_t src1, uint64_t src2);

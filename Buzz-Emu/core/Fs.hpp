@@ -17,6 +17,17 @@ T ReadFromVec(const std::vector<u8>& vec, size_t offset) {
     return *reinterpret_cast<const T*>(vec.data() + offset);
 }
 
+template<typename T>
+T ReadFromVecTurnc(const std::vector<uint8_t>& vec, size_t offset) {
+    static_assert(std::is_trivially_copyable<T>::value, "Type T must be trivially copyable");
+    size_t available_size = vec.size() - offset;
+    size_t bytes_to_read = std::min(sizeof(T), available_size);
+
+    T result = {};
+    std::memcpy(&result, vec.data() + offset, bytes_to_read);
+    return result;
+}
+
 template <typename T>
 std::vector<uint8_t> ToByteVector(T value) {
     static_assert(std::is_integral_v<T>, "T must be an integral type");

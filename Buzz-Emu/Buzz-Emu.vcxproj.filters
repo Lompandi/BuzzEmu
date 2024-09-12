@@ -99,4 +99,7 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="trash_can\old_instruction_handlers.txt" />
+  </ItemGroup>
 </Project>

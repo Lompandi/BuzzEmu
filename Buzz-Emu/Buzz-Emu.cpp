@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "emulator/Emulator.hpp"
+#include "emulation/x86/InstructionHandler.hpp"
 
 int main()
 {
@@ -43,17 +44,28 @@ int main()
     };
 
     std::vector<Section> load_segment = { text_section, rdata, data, tail_data };
-
-    auto base = emu.memory.Alloc(0x2200).value(); //this will be our stack!
-    std::cout << "Stack: 0x" << std::hex << base << " - " << base + 0x2200 << "\n";
     emu.LoadExecutable("C:\\Users\\USER\\source\\repos\\ConsoleApplication1\\x64\\Release\\ConsoleApplication1.exe", load_segment);
 
     Emulator forked(emu);
 
     //Set the program entry points
     emu.SetReg(Register::Rip, 0x00001000);
-    //set the current stack pointer
-    emu.SetReg(Register::Rsp, base + 0x2c8);
+
+    //set up a stack
+    auto base = emu.memory.Alloc(3 * 1024).value(); 
+    std::cout << "Stack: 0x" << std::hex << base << " - " << base + 0x2200 << "\n";
+    emu.SetReg(Register::Rsp, base + 3 * 1024);
+
+    // Example memory allocation and initialization
+    auto argv = emu.memory.Alloc(8).value(); // Allocate memory for argv
+    emu.memory.Write(argv, "ConsoleApplication1.exe\0");        // Write a null-terminated string to memory
+
+    // Push arguments onto the stack in the order used by the main function
+    push(0ull);   // Push auxv (for example purposes; typically this is not used directly in the main function)
+    push(0ull);   // Push envp (pointer to environment variables; here set to 0 for example)
+    push(argv);   // Push argv (pointer to the argument vector)
+    push(1ull);   // Push argc (number of arguments; in this case, 1 argument)
+
     emu.Run();
 }
 
