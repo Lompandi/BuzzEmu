@@ -68,12 +68,14 @@ u64 XorAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
 u64 AndAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
 u64 OrAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
 
+//will be segment register
+u64 MovAndSetFlags(u64 dst, u64 src);
 //u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend);
 u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, FlagsRegister64& flags);
 
-u64 AddAndSetFlags(FlagsRegister64& flags, u64 operand1, u64 operand2);
+u64 AddAndSetFlags(u64 operand1, u64 operand2, FlagsRegister64& flags);
 
-u64 CmpAndSetFlags(FlagsRegister64& flags, uint64_t src1, uint64_t src2);
+u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, FlagsRegister64& flags);
 
 u64 TestAndSetFlags(FlagsRegister64& flags, u64 src1, u64 src2);
 

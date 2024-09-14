@@ -11,10 +11,8 @@ constexpr std::array<uint8_t, 4> scale_table = { 1, 2, 4, 8 };
 void HandleSib(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& clac_offset) {
     auto sib_byte = ctx->sib;
 
-    // Log the SIB byte value
     std::cout << "SIB Byte: " << std::hex << static_cast<int>(sib_byte) << std::dec << std::endl;
 
-    // Extract scale from the SIB byte
     std::cout << "scale bits: " << SIB_SCALE(sib_byte) << "\n";
     sib.scale = scale_table[SIB_SCALE(sib_byte)];
     std::cout << "Scale: " << static_cast<int>(sib.scale) << std::endl;
@@ -26,6 +24,11 @@ void HandleSib(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& clac_o
         std::cout << "No index register used" << std::endl;
     } else {
         sib.index_reg = static_cast<Register>(SIB_INDEX(sib_byte));
+        if (_REX_X(ctx->pfx_rex)) {
+            /*REX.X extends the index field for sib*/
+            sib.index_reg = static_cast<Register>(std::to_underlying(sib.index_reg) + 8);
+        }
+
         sib.use_indx = true;
         std::cout << "Index Register: " << static_cast<int>(sib.index_reg) << std::endl;
     }
@@ -48,6 +51,10 @@ void HandleSib(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& clac_o
             std::cout << "No base register used" << std::endl;
         } else {
             sib.base_reg = static_cast<Register>(SIB_BASE(sib_byte));
+            if (_REX_B(ctx->pfx_rex)) {
+                /*REX.B will extends the SIB's base field*/
+                sib.base_reg = static_cast<Register>(std::to_underlying(sib.base_reg) + 8);
+            }
             sib.use_base = true;
             std::cout << "Base Register: " << static_cast<int>(sib.base_reg) << std::endl;
         }

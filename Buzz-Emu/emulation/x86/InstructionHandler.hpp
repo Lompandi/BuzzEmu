@@ -8,9 +8,16 @@
 
 #define push(expr) emu.memory.Write(emu.Reg(Register::Rsp) - sizeof(expr), ##expr); emu.SetReg(Register::Rsp, emu.Reg(Register::Rsp) - sizeof(expr))
 //if memonic collides, the number will be its opcode
+// 
+// TODO Instructions: 
+// {0xCC (INT3)}, 
+// {0xB0 (MOV r8, imm8  (OI))}, 
+// {0x88 (MOV r/m8, r8  (MR))}, 
+// 
 //Addition
 void Add_01(BUZE_STANDARD_PARAM);
 void Add_03(BUZE_STANDARD_PARAM);
+void Add_05(BUZE_STANDARD_PARAM);
 void Add_81(BUZE_STANDARD_PARAM);
 void Add_83(BUZE_STANDARD_PARAM);
 //Logical AND
@@ -30,10 +37,12 @@ void Xor_35(BUZE_STANDARD_PARAM);
 void Xor_81(BUZE_STANDARD_PARAM);
 void Xor_83(BUZE_STANDARD_PARAM);
 //Compare two operands
+void Cmp_3B(BUZE_STANDARD_PARAM);
 void Cmp_83(BUZE_STANDARD_PARAM);
 //Logical OR
 void Or_09(BUZE_STANDARD_PARAM);
 void Or_0D(BUZE_STANDARD_PARAM);
+void Or_81(BUZE_STANDARD_PARAM);
 void Or_83(BUZE_STANDARD_PARAM);
 //Move
 void Mov_89(BUZE_STANDARD_PARAM);
@@ -41,9 +50,12 @@ void Mov_8B(BUZE_STANDARD_PARAM);
 //Move signed extended
 void Movsxd_63(BUZE_STANDARD_PARAM);
 //Logical compare
+void Test_84(BUZE_STANDARD_PARAM);
 void Test_85(BUZE_STANDARD_PARAM);
 //Push values onto the stack
-void Push_50_57(BUZE_STANDARD_PARAM);
+void Push_50_57(BUZE_STANDARD_PARAM); 
 //Call procedure
 void Call_E8(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc);
 void Call_FF_reg2(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc);
+//Return from procedure
+void Ret_C3(BUZE_STANDARD_PARAM, u64& pc);

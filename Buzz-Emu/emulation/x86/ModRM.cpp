@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <type_traits>
 
 #include "ModRM.hpp"
 
@@ -70,6 +71,11 @@ void Handle_ModRM(Emulator& emu, x86Dcctx* ctx, ModRM& modrm) {
 
     // Extract and log the register part from ModRM byte
     modrm.Reg.reg = static_cast<Register>(MODRM_REG(ctx->modrm));
+    if (_REX_R(ctx->pfx_rex)) {
+        /*REX.R will extend the reg field in ModR/M*/
+        modrm.Reg.reg = static_cast<Register>(std::to_underlying(modrm.Reg.reg) + 8);
+    }
+
     modrm.Reg.val = emu.Reg(modrm.Reg.reg);
     DEBUG_LOG("Register extracted: reg = " << static_cast<int>(modrm.Reg.reg) << ", val = " << std::hex << modrm.Reg.val);
 
@@ -81,7 +87,12 @@ void Handle_ModRM(Emulator& emu, x86Dcctx* ctx, ModRM& modrm) {
     // Handle the register value if present and log
     if (val.first) {
         modrm.RM_Mod.reg = val.first.value(); // Register
-        modrm.RM_Mod.reg_val = emu.Reg(val.first.value());
+        if (_REX_B(ctx->pfx_rex)) {
+            /*REX.B field will extends the RM field in ModR/M*/
+            modrm.RM_Mod.reg = static_cast<Register>(std::to_underlying(modrm.RM_Mod.reg) + 8);
+        }
+
+        modrm.RM_Mod.reg_val = emu.Reg(modrm.RM_Mod.reg);
         modrm.RM_Mod.RMRegSet = true;
         DEBUG_LOG("RM_Mod register: reg = " << static_cast<int>(modrm.RM_Mod.reg) << ", reg_val = " << std::hex << modrm.RM_Mod.reg_val);
     }

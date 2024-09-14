@@ -1,6 +1,8 @@
 
 #include "Flags.hpp"
 
+#include <iostream>
+
 unsigned long long popcountll(unsigned long long x) {
     unsigned long long count = 0;
     while (x) {
@@ -8,6 +10,11 @@ unsigned long long popcountll(unsigned long long x) {
         ++count;      // Increment count
     }
     return count;
+}
+
+u64 MovAndSetFlags(u64 dst, u64 src) {
+    std::cout << "Moving 0x" << std::hex << src << "\n";
+    return src;
 }
 
 u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend) {
@@ -96,7 +103,7 @@ u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, FlagsRegister64& flags
 }
 
 /*return = operand1 + operand2*/
-u64 AddAndSetFlags(FlagsRegister64& flags, u64 operand1, u64 operand2) {
+u64 AddAndSetFlags(u64 operand1, u64 operand2, FlagsRegister64& flags) {
     u64 result = operand1 + operand2;
 
     // Set the Carry Flag (CF)
@@ -168,7 +175,7 @@ void SetLogicOpFlags(FlagsRegister64& flags, u64 value) {
 }
 
 //Cmp one, two
-u64 CmpAndSetFlags(FlagsRegister64& flags, uint64_t src1, uint64_t src2) {
+u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, FlagsRegister64& flags) {
     // Perform the subtraction
     uint64_t result = src1 - src2;
 

@@ -43,6 +43,9 @@ int main()
         .permission = PERM_READ
     };
 
+    // also: load "C:\Windows\System32\msvcp140.dll"
+
+
     std::vector<Section> load_segment = { text_section, rdata, data, tail_data };
     emu.LoadExecutable("C:\\Users\\USER\\source\\repos\\ConsoleApplication1\\x64\\Release\\ConsoleApplication1.exe", load_segment);
 
@@ -66,6 +69,6 @@ int main()
     push(argv);   // Push argv (pointer to the argument vector)
     push(1ull);   // Push argc (number of arguments; in this case, 1 argument)
 
-    emu.Run();
+    emu.TestRun();
 }
 

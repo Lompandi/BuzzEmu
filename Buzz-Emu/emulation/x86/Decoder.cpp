@@ -663,12 +663,15 @@ void Ldasm::DecodeInstruction() {
         if (opcode >= 0x80 && opcode <= 0x8F)
         {
             flags = F_Z;
-
+            /* update the opcode size */
+            x86_dctx.opcode_size = 2;
             /* update the operand size */
             GetOsize(x86_Flag_F64);
         }
         else if (opcode == 0x78)
         {
+            /* update the opcode size */
+            x86_dctx.opcode_size = 3;
             /* insertq, extrq */
             if (x86_dctx.pfx_mandatory == PREFIX_REPNE ||
                 x86_dctx.pfx_mandatory == PREFIX_OSIZE)
@@ -680,6 +683,7 @@ void Ldasm::DecodeInstruction() {
     }
     else if (x86_dctx.table_index == TABLE_INDEX_XOP_0A)
     {
+        x86_dctx.opcode_size = 3;
         /* bextr, lwpins, lwpval */
         if (opcode == 0x10 || opcode == 0x12)
         {
@@ -717,6 +721,8 @@ void Ldasm::DecodeClear() {
     x86_dctx.p_vsib = false;
     x86_dctx.p_modrm = false;
     x86_dctx.p_sib = false;
+
+    x86_dctx.opcode_size = 1;
 
     x86_dctx.table_index = ~0;
     x86_dctx.disp_size = 0;

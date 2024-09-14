@@ -17,6 +17,12 @@ T ReadFromVec(const std::vector<u8>& vec, size_t offset) {
     return *reinterpret_cast<const T*>(vec.data() + offset);
 }
 
+template <typename FuncType, typename... ExtraArgs>
+auto CallInstrEmuFunc(FuncType func, u64 value1, u64 value2, ExtraArgs... extraArgs)
+-> decltype(func(value1, value2, extraArgs...)) {
+    return func(value1, value2, extraArgs...);
+}
+
 template<typename T>
 T ReadFromVecTurnc(const std::vector<uint8_t>& vec, size_t offset) {
     static_assert(std::is_trivially_copyable<T>::value, "Type T must be trivially copyable");

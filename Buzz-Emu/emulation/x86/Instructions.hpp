@@ -11,6 +11,7 @@
 enum Instruction : u32 {
 	ADD_01 = 0x01,
 	ADD_03 = 0x03,
+	ADD_05 = 0x05,
 	OR_09 = 0x09,
 	OR_0C = 0x0C,
 	OR_0D = 0x0D,
@@ -25,6 +26,7 @@ enum Instruction : u32 {
 	XOR_33 = 0x33,
 	XOR_34 = 0x34,
 	XOR_35 = 0X35,
+	CMP_3B = 0x3B,
 	PUSH_50 = 0x50,
 	PUSH_51 = 0x51,
 	PUSH_52 = 0x52,
@@ -35,9 +37,11 @@ enum Instruction : u32 {
 	PUSH_57 = 0x57,
 	MOVSXD_63 = 0x63,
 	JZ_74 = 0x74,
+	JNZ_75 = 0x75,
 	JL_7C = 0x7C,
 	_81 = 0x81,
 	_83 = 0x83,
+	TEST_84 = 0x84,
 	TEST_85 = 0x85,
 	MOV_89 = 0x89,
 	MOV_8B = 0x8B,
@@ -45,6 +49,7 @@ enum Instruction : u32 {
 	TEST_A8 = 0xA8,
 	TEST_A9 = 0xA9,
 	MOV_B8 = 0xB8,
+	RET_C3 = 0xC3,
 	CALL_E8 = 0xE8,
 	JMP_EB = 0xEB,
 	_FF = 0xFF,
@@ -57,25 +62,9 @@ enum Instruction : u32 {
 
 #define GET_OPSIZE_ENUM(o) (o & 0x00000003)
 
-#define INSTRUCTION_LOGICAL_AX_IMM(name, opcode, op_operator) \
-void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) { \
-u64 result; \
-if (ctx->osize == X86_Osize_16bit && inst.size() == 3) { \
-	result = GET_X_REG(emu.Reg(Register::Rax)) ##op_operator ReadFromVec<u16>(inst, 1); \
-	emu.SetReg(Register::Rax, result); \
-	SetLogicOpFlags(emu.flags, result); \
-} \
-else if (ctx->osize == X86_Osize_32bit && inst.size() == 5) { \
-	result = GET_EXT_REG(emu.Reg(Register::Rax)) ##op_operator ReadFromVec<u32>(inst, 1); \
-	emu.SetReg(Register::Rax, result); \
-	SetLogicOpFlags(emu.flags, result); \
-} \
-else if (ctx->osize == X86_Osize_64bit && inst.size() == 5) { \
-	result = emu.Reg(Register::Rax) ##op_operator static_cast<u64>(ReadFromVec<u32>(inst, 1)); \
-	emu.SetReg(Register::Rax, result); \
-	SetLogicOpFlags(emu.flags, result); \
-} \
-} \
+//instruction position
+#define _INSTR_POS(ctx, offset) (ctx)->pos_opcode + offset
+#define INSTR_POS(offset) _INSTR_POS(ctx, offset)
 
 #define INSTRUCTION_OP2_MR(name, opcode, \
 exp_2reg16, \
@@ -176,141 +165,6 @@ else {																									\
 		}																								\
 		else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {\
 			emu.memory.WriteFrom(calc_offset,ToByteVector(##sib_64));																	\
-		}																								\
-	}																									\
-}																										\
-return;	\
-}
-
-//exclude imm8
-//TODO: use GET_OSIZE_ENUM on all of the operand size switches(and ofc, change osize from if-else to switch first if not done)
-#define INSTRUCTION_OP2_MI(name, opcode, \
-exp_reg16_imm, \
-exp_reg32_imm,	\
-exp_reg64_imm, \
-\
-exp_mem16_imm, \
-exp_mem32_imm, \
-exp_mem64_imm, \
-\
-exp_memdisp16_imm, \
-exp_memdisp32_imm, \
-exp_memdisp64_imm, \
-\
-sib_disp16_imm,\
-sib_disp32_imm,\
-sib_disp64_imm,\
-\
-sib16_imm,\
-sib32_imm,\
-sib64_imm\
-) \
-void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {								\
-OperandSize opsize = ctx->osize;																		\
-																										\
-ModRM mod_rm;																							\
-Handle_ModRM(emu, ctx, mod_rm);														\
-																										\
-if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet)		\
-return;\
-std::cout << "ModR/M rmreg set: " << (bool)mod_rm.RM_Mod.RMRegSet << "\n";\
-std::cout << "ModR/M disp: " << (bool)mod_rm.RM_Mod.disp << "\n"; \
-std::cout << "\nMI instruction: processing...\n";	\
-if (!ctx->p_sib) {																						\
-	if (!mod_rm.RM_Mod.IsPtr && mod_rm.RM_Mod.RMRegSet) { 		\
-		switch(GET_OPSIZE_ENUM(ctx->osize))	{									\
-		case OperandSize::X86_Osize_16bit :\
-			emu.SetReg(mod_rm.RM_Mod.reg, ##exp_reg16_imm);\
-			break;\
-		case OperandSize::X86_Osize_32bit:	\
-			emu.SetReg(mod_rm.RM_Mod.reg, ##exp_reg32_imm);\
-			break;\
-		case OperandSize::X86_Osize_64bit:	\
-			emu.SetReg(mod_rm.RM_Mod.reg,##exp_reg64_imm);\
-			break;\
-		default: \
-			std::cout << "MI: Unknown opsize \n";\
-			break;\
-		}\
-	}																									\
-	else if (!mod_rm.RM_Mod.disp && mod_rm.RM_Mod.RMRegSet) { 								\
-		std::cout << "MI: Reading the op data...\n";\
-		switch(GET_OPSIZE_ENUM(ctx->osize)){				\
-		case OperandSize::X86_Osize_16bit:													\
-			emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val), ToByteVector(##exp_mem16_imm));														\
-			break;									\
-		case OperandSize::X86_Osize_32bit:												\
-			emu.memory.WriteFrom(GET_EXT_REG(mod_rm.RM_Mod.reg_val), ToByteVector(##exp_mem32_imm));														\
-			break;																								\
-		case OperandSize::X86_Osize_64bit:		\
-			emu.memory.WriteFrom(mod_rm.RM_Mod.reg_val,	ToByteVector(##exp_mem64_imm));	\
-			break; \
-		default: \
-			break;\
-		}\
-	}																									\
-	else if (mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) { 			\
-		s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, 2).value();								\
-																										\
-		if (opsize == OperandSize::X86_Osize_16bit) {													\
-			emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp,								\
-				ToByteVector(##exp_memdisp16_imm));														\
-		}																								\
-		else if (opsize == OperandSize::X86_Osize_32bit) {												\
-			emu.memory.WriteFrom(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp,								\
-				ToByteVector(##exp_memdisp32_imm));														\
-		}																								\
-		else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {						\
-			emu.memory.WriteFrom(mod_rm.RM_Mod.reg_val + disp,											\
-				ToByteVector(##exp_memdisp64_imm));																	\
-		}																								\
-	}		\
-	else if(!mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) {\
-		s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, 2).value();								\
-																										\
-		if (opsize == OperandSize::X86_Osize_16bit) {													\
-			emu.memory.WriteFrom(disp,								\
-				ToByteVector(##exp_memdisp16_imm));														\
-		}																								\
-		else if (opsize == OperandSize::X86_Osize_32bit) {												\
-			emu.memory.WriteFrom(disp,								\
-				ToByteVector(##exp_memdisp32_imm));														\
-		}																								\
-		else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {						\
-			emu.memory.WriteFrom(disp,											\
-				ToByteVector(##exp_memdisp64_imm));																	\
-		}		\
-	}																							\
-																			\
-}																										\
-else {																									\
-	Sib sib_byte;																						\
-	u64 calc_offset = 0;																				\
-	HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);													\
-	if (!sib_byte.valid)																				\
-		return;\
-																										\
-	if (mod_rm.RM_Mod.disp) { 													\
-		s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, 3).value();								\
-		if (opsize == OperandSize::X86_Osize_16bit) {\
-			emu.memory.WriteFrom(calc_offset + disp,ToByteVector(##sib_disp16_imm));														\
-		}																								\
-		else if (opsize == OperandSize::X86_Osize_32bit) {		\
-			emu.memory.WriteFrom(calc_offset + disp,ToByteVector(##sib_disp32_imm));														\
-		}																								\
-		else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {\
-			emu.memory.WriteFrom(calc_offset + disp,ToByteVector(##sib_disp64_imm));																	\
-		}																								\
-	}																									\
-	else { 																	\
-		if (opsize == OperandSize::X86_Osize_16bit) {\
-			emu.memory.WriteFrom(calc_offset,ToByteVector(##sib16_imm));														\
-		}																								\
-		else if (opsize == OperandSize::X86_Osize_32bit) {	\
-			emu.memory.WriteFrom(calc_offset,ToByteVector(##sib32_imm));														\
-		}																								\
-		else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {\
-			emu.memory.WriteFrom(calc_offset,ToByteVector(##sib64_imm));																	\
 		}																								\
 	}																									\
 }																										\
@@ -431,105 +285,310 @@ void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) 
 for displacement, there will be a varible name "disp" containing the displacement value
 for SIB offset, it will be "calc_offset"
 */
-#define INSTRUCTION_OP2_RM(name, opcode, \
-exp_2reg16, \
-exp_2reg32,	\
-exp_2reg64, \
-\
-exp_mem_reg16, \
-exp_mem_reg32, \
-exp_mem_reg64, \
-\
-exp_memdisp_reg16, \
-exp_memdisp_reg32, \
-exp_memdisp_reg64, \
-\
-sib_disp_16,\
-sib_disp_32,\
-sib_disp_64,\
-\
-sib_16,\
-sib_32,\
-sib_64\
-) \
-void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {\
-OperandSize opsize = ctx->osize; ModRM mod_rm; Handle_ModRM(emu, ctx, mod_rm); if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet) return;if (!ctx->p_sib) {				\
-	if (!mod_rm.RM_Mod.IsPtr && mod_rm.RM_Mod.RMRegSet) {																																				\
-		if (opsize == OperandSize::X86_Osize_16bit) {																														\
-			emu.SetReg(mod_rm.Reg.reg, ##exp_2reg16);				\
-		}																																									\
-		else if (opsize == OperandSize::X86_Osize_32bit) {																													\
-			emu.SetReg(mod_rm.Reg.reg, ##exp_2reg32);		\
-		}																																									\
-		else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {																						\
-			emu.SetReg(mod_rm.Reg.reg, ##exp_2reg64);																	\
-		}																																									\
-	}																																										\
-	else if (!mod_rm.RM_Mod.disp) {																																			\
-		if (opsize == OperandSize::X86_Osize_16bit) {																														\
-			emu.SetReg(mod_rm.Reg.reg, ##exp_mem_reg16);\
-		}																																													 \
-		else if (opsize == OperandSize::X86_Osize_32bit) {																																	 \
-			emu.SetReg(mod_rm.Reg.reg, ##exp_mem_reg32);\
-		}																																															 \
-		else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {																												 \
-			emu.SetReg(mod_rm.Reg.reg, ##exp_mem_reg64);																 \
-		}																																															 \
-	}																																																 \
-	else if (mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) {																																				 \
-		s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, 2).value(); if (opsize == OperandSize::X86_Osize_16bit) {																				 \
-			emu.SetReg(mod_rm.Reg.reg, ##exp_memdisp_reg16); \
-		}																																															 \
-		else if (opsize == OperandSize::X86_Osize_32bit) {																																			 \
-			emu.SetReg(mod_rm.Reg.reg, ##exp_memdisp_reg32);\
-		}																																																	\
-		else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {																														\
-			emu.SetReg(mod_rm.Reg.reg, ##exp_memdisp_reg64);																\
-		}																																																	\
-	}																																																		\
-}																																																			\
-else {											\
-	std::cout << "Entering SIB procession...\n";																																							\
-	Sib sib_byte;u64 calc_offset = 0;HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);if(!sib_byte.valid) return; if (mod_rm.RM_Mod.disp) {																												\
-		s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, 3).value(); if (opsize == OperandSize::X86_Osize_16bit) {																						\
-			emu.SetReg(mod_rm.Reg.reg, ##sib_disp_16);\
-		}																																																			   \
-		else if (opsize == OperandSize::X86_Osize_32bit) {																																							   \
-			emu.SetReg(mod_rm.Reg.reg, ##sib_disp_32);\
-		}																																																				   \
-		else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {																																	   \
-			emu.SetReg(mod_rm.Reg.reg, ##sib_disp_64);							   \
-		}																																																				   \
-	}																																																					   \
-	else {																																																				   \
-		if (opsize == OperandSize::X86_Osize_16bit) {																																									   \
-			emu.SetReg(mod_rm.Reg.reg, ##sib_16);		   \
-		}																																																				   \
-		else if (opsize == OperandSize::X86_Osize_32bit) {																																								   \
-			emu.SetReg(mod_rm.Reg.reg, ##sib_32);	   \
-		}																																																				   \
-		else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {																																	   \
-			emu.SetReg(mod_rm.Reg.reg, ##sib_64);									   \
-		}																																																				   \
-	}																																																					   \
-} return;\
-}
-
-
 //c++20 function def:
+
 
 //helper function to unpack :
 // Helper function to unpack arguments from a tuple and call a function
+
+
+//TODO: RECODE THIS TO FORM AN AL-AH register encoding instead of 32-64 bit register encoding
 template <typename FuncType, typename... ExtraArgs>
-auto CallInstrEmuFunc(FuncType func, u64 value1, u64 value2, ExtraArgs... extraArgs)
--> decltype(func(value1, value2, extraArgs...)) {
-    return func(value1, value2, extraArgs...);
+void def_instruction_op2_MR8(Emulator& emu,
+	x86Dcctx* ctx,
+	const std::vector<u8>& inst,
+	FuncType instr_emu_func,
+	ModRM& mod_rm,
+	u64 op1,
+	u64 op2,
+	ExtraArgs... extra_args) {
+
+	if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet) return;
+	if (!ctx->p_sib) {
+		if (!mod_rm.RM_Mod.IsPtr && mod_rm.RM_Mod.RMRegSet) {
+			if (mod_rm.RM_Mod.reg <= 3) {
+				emu.SetReg(mod_rm.RM_Mod.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<u8>(op1),
+					static_cast<u8>(op2),
+					extra_args...
+				));
+			}
+			else {
+				emu.SetReg(mod_rm.RM_Mod.reg, mod_rm.RM_Mod.reg  CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<u8>(op1),
+					static_cast<u8>(op2),
+					extra_args...
+				));
+			}
+		}
+		else if (!mod_rm.RM_Mod.disp) {
+			emu.memory.Write<u8>(static_cast<u8>(emu.Reg(mod_rm.RM_Mod.reg)),
+				static_cast<u8>(CallInstrEmuFunc(
+					instr_emu_func,
+					emu.memory.Read<u8>(static_cast<u8>(op1)).value(),
+					static_cast<u8>(op2),
+					extra_args...)
+					));
+		}
+		else if (mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) {
+			s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, INSTR_POS(2)).value();
+			
+			emu.memory.Write<u8>(static_cast<u8>(emu.Reg(mod_rm.RM_Mod.reg)) + disp,
+				static_cast<u8>(CallInstrEmuFunc(
+					instr_emu_func,
+					emu.memory.Read<u8>(static_cast<u8>(op1) + disp).value(),
+					static_cast<u8>(op2),
+					extra_args...)
+					));
+		}
+		else if (mod_rm.RM_Mod.disp) {
+			s64 disp = emu.Reg(Register::Rip) + ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, INSTR_POS(2)).value() + inst.size();
+			std::cout << "RM instruction: Accessing disp32: " << std::hex << disp << "\n";
+
+			emu.memory.Write<u8>(disp,
+				static_cast<u8>(CallInstrEmuFunc(
+					instr_emu_func,
+					emu.memory.Read<u8>(disp).value(),
+					static_cast<u8>(op2),
+					extra_args...)
+					));
+		}
+	}																																																			\
+	else {
+		std::cout << "Entering SIB procession...\n";
+		Sib sib_byte;
+		u64 calc_offset = 0;
+		HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);
+		if (!sib_byte.valid)
+			return;
+
+		if (mod_rm.RM_Mod.disp) {
+			s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, INSTR_POS(3)).value();
+			
+			emu.memory.Write<u8>(static_cast<u8>(calc_offset + disp,
+				static_cast<u8>(CallInstrEmuFunc(
+					instr_emu_func,
+					emu.memory.Read<u8>(calc_offset + disp).value(),
+					static_cast<u8>(op2),
+					extra_args...)
+					));
+		}																																																					   \
+		else {
+			emu.memory.Write<u8>(static_cast<u8>(calc_offset,
+				static_cast<u8>(CallInstrEmuFunc(
+					instr_emu_func,
+					emu.memory.Read<u8>(calc_offset).value(),
+					static_cast<u8>(op2),
+					extra_args...)
+					));
+		}
+	}
+	return;
 }
 
-//template <typename FuncType, typename OPtype16, typename OPtype32, typename OPtype64, typename... ExtraArgs>
-//void def_instruction_op2_RM(FuncType instr_emu_func, u64 op1, u64 op2, ExtraArgs... extra_args) {
+template <typename FuncType,
+	typename OPtype16, typename OPtype32, typename OPtype64,
+	typename OP2type16, typename OP2type32, typename OP2type64,
+	typename... ExtraArgs>
+void def_instruction_op2_RM(Emulator& emu,
+	x86Dcctx* ctx,
+	const std::vector<u8>& inst,
+	FuncType instr_emu_func,
+	ModRM& mod_rm,
+	u64 op1,
+	u64 op2,
+	ExtraArgs... extra_args) {
 
-//}
+	if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet) return;
+	if (!ctx->p_sib) {
+		if (!mod_rm.RM_Mod.IsPtr && mod_rm.RM_Mod.RMRegSet) {
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype16>(op1),
+					static_cast<OPtype16>(static_cast<OP2type16>(op2)),
+					extra_args...
+				));
+				break;
+			case OperandSize::X86_Osize_32bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OP2type32>(op1),
+					static_cast<OPtype32>(static_cast<OP2type32>(op2)),
+					extra_args...));
+				break;
+			case OperandSize::X86_Osize_64bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype64>(op1),
+					static_cast<OPtype64>(static_cast<OP2type64>(op2)),
+					extra_args...));
+				break;
+			default:
+				break;
+			}
+		}
+		else if (!mod_rm.RM_Mod.disp) {
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype16>(op1),
+					static_cast<OPtype16>(emu.memory.Read<OP2type16>(static_cast<OP2type16>(op2)).value()),
+					extra_args...));
+				break;
+			case OperandSize::X86_Osize_32bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype32>(op1),
+					static_cast<OPtype32>(emu.memory.Read<OP2type32>(static_cast<OP2type32>(op2)).value()),
+					extra_args...));
+				break;
+			case OperandSize::X86_Osize_64bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype64>(op1),
+					static_cast<OPtype64>(emu.memory.Read<OP2type64>(static_cast<OP2type64>(op2)).value()),
+					extra_args...));
+				break;
+			default:
+				break;
+			}
+		}
+		else if (mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) {
+			s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, INSTR_POS(2)).value();
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype16>(op1),
+					static_cast<OPtype16>(emu.memory.Read<OP2type16>(static_cast<OP2type16>(op2) + disp).value()),
+					extra_args...));
+				break;
+			case OperandSize::X86_Osize_32bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype32>(op1),
+					static_cast<OPtype32>(emu.memory.Read<OP2type32>(static_cast<OP2type32>(op2) + disp).value()),
+					extra_args...));
+				break;
+			case OperandSize::X86_Osize_64bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype64>(op1),
+					static_cast<OPtype64>(emu.memory.Read<OP2type64>(static_cast<OP2type64>(op2) + disp).value()),
+					extra_args...));
+				break;
+			default:
+				break;
+			}
+		}
+		else if (mod_rm.RM_Mod.disp) {
+			s64 disp = emu.Reg(Register::Rip) + ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, INSTR_POS(2)).value() + inst.size();
+			std::cout << "RM instruction: Accessing disp32: " << std::hex << disp << "\n";
+
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype16>(op1),
+					static_cast<OPtype16>(emu.memory.Read<OP2type16>(disp).value()),
+					extra_args...));
+				break;
+			case OperandSize::X86_Osize_32bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype32>(op1),
+					static_cast<OPtype32>(emu.memory.Read<OP2type32>(disp).value()),
+					extra_args...));
+				break;
+			case OperandSize::X86_Osize_64bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype64>(op1),
+					static_cast<OPtype64>(emu.memory.Read<OP2type64>(disp).value()),
+					extra_args...));
+				break;
+			default:
+				break;
+			}
+		}
+	}																																																			\
+	else {
+		std::cout << "Entering SIB procession...\n";
+		Sib sib_byte;
+		u64 calc_offset = 0;
+		HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);
+		if (!sib_byte.valid)
+			return;
+
+		if (mod_rm.RM_Mod.disp) {
+			s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, INSTR_POS(3)).value();
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype16>(op1),
+					static_cast<OPtype16>(emu.memory.Read<OP2type16>(calc_offset + disp).value()),
+					extra_args...
+				));
+				break;
+			case OperandSize::X86_Osize_32bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype32>(op1),
+					static_cast<OPtype32>(emu.memory.Read<OP2type32>(calc_offset + disp).value()),
+					extra_args...
+				));
+				break;
+			case OperandSize::X86_Osize_64bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype64>(op1),
+					static_cast<OPtype64>(emu.memory.Read<OP2type64>(calc_offset + disp).value()),
+					extra_args...
+				));
+				break;
+			default:
+				break;
+			}
+		}																																																					   \
+		else {
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype16>(op1),
+					static_cast<OPtype16>(emu.memory.Read<OP2type16>(calc_offset).value()),
+					extra_args...
+				));
+				break;
+			case OperandSize::X86_Osize_32bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype32>(op1),
+					static_cast<OPtype32>(emu.memory.Read<OP2type32>(calc_offset).value()),
+					extra_args...
+				));
+				break;
+			case OperandSize::X86_Osize_64bit:
+				emu.SetReg(mod_rm.Reg.reg, CallInstrEmuFunc(
+					instr_emu_func,
+					static_cast<OPtype64>(op1),
+					static_cast<OPtype64>(emu.memory.Read<OP2type64>(calc_offset).value()),
+					extra_args...
+				));
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	return;
+}
 
 //op2 in here will be automatically placed by the offset, so we will only needs to be dealing with op1
 template <typename FuncType,
@@ -537,18 +596,20 @@ template <typename FuncType,
 	typename Immtype16, typename Immtype32, typename Immtype64,
 	typename... ExtraArgs>
 void def_instruction_op2_MI(
-    Emulator& emu,
-    x86Dcctx* ctx,
-    const std::vector<u8>& inst,
-    FuncType instr_emu_func,
-    ModRM& mod_rm,
-    u64 op1,
-    u32 offset_to_imm,
-    ExtraArgs... extra_args)
+	Emulator& emu,
+	x86Dcctx* ctx,
+	const std::vector<u8>& inst,
+	FuncType instr_emu_func,
+	ModRM& mod_rm,
+	u64 op1,
+	u32 offset_to_imm,
+	ExtraArgs... extra_args)
 {
 	OperandSize opsize = ctx->osize;
 	if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet)
 		return;
+
+	auto _offset_to_imm = offset_to_imm + (mod_rm.RM_Mod.disp / 8);
 
 	std::cout << "ModR/M rmreg set: " << (bool)mod_rm.RM_Mod.RMRegSet << "\n";
 	std::cout << "ModR/M disp: " << (bool)mod_rm.RM_Mod.disp << "\n";
@@ -560,7 +621,7 @@ void def_instruction_op2_MI(
 				emu.SetReg(mod_rm.RM_Mod.reg, CallInstrEmuFunc(
 					instr_emu_func,
 					static_cast<OPtype16>(op1),
-					static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, offset_to_imm)),
+					static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, _offset_to_imm)),
 					extra_args...
 				));
 				break;
@@ -568,7 +629,7 @@ void def_instruction_op2_MI(
 				emu.SetReg(mod_rm.RM_Mod.reg, CallInstrEmuFunc(
 					instr_emu_func,
 					static_cast<OPtype32>(op1),
-					static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, offset_to_imm)),
+					static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, _offset_to_imm)),
 					extra_args...
 				));
 				break;
@@ -576,7 +637,7 @@ void def_instruction_op2_MI(
 				emu.SetReg(mod_rm.RM_Mod.reg, CallInstrEmuFunc(
 					instr_emu_func,
 					static_cast<OPtype64>(op1),
-					static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, offset_to_imm)),
+					static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, _offset_to_imm)),
 					extra_args...
 				));
 				break;
@@ -592,7 +653,7 @@ void def_instruction_op2_MI(
 				emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val), ToByteVector(CallInstrEmuFunc(
 					instr_emu_func,
 					emu.memory.Read<OPtype16>(static_cast<OPtype16>(op1)).value(),
-					static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, offset_to_imm)),
+					static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, _offset_to_imm)),
 					extra_args...
 				)));
 				break;
@@ -600,7 +661,7 @@ void def_instruction_op2_MI(
 				emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val), ToByteVector(CallInstrEmuFunc(
 					instr_emu_func,
 					emu.memory.Read<OPtype32>(static_cast<OPtype32>(op1)).value(),
-					static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, offset_to_imm)),
+					static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, _offset_to_imm)),
 					extra_args...
 				)));
 				break;
@@ -608,7 +669,7 @@ void def_instruction_op2_MI(
 				emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val), ToByteVector(CallInstrEmuFunc(
 					instr_emu_func,
 					emu.memory.Read<OPtype64>(static_cast<OPtype64>(op1)).value(),
-					static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, offset_to_imm)),
+					static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, _offset_to_imm)),
 					extra_args...
 				)));
 				break;
@@ -625,7 +686,7 @@ void def_instruction_op2_MI(
 					ToByteVector(CallInstrEmuFunc(
 						instr_emu_func,
 						emu.memory.Read<OPtype16>(static_cast<OPtype16>(op1) + disp).value(),
-						static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, offset_to_imm)),
+						static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, _offset_to_imm)),
 						extra_args...
 					)));
 				break;
@@ -634,7 +695,7 @@ void def_instruction_op2_MI(
 					ToByteVector(CallInstrEmuFunc(
 						instr_emu_func,
 						emu.memory.Read<OPtype32>(static_cast<OPtype32>(op1) + disp).value(),
-						static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, offset_to_imm)),
+						static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, _offset_to_imm)),
 						extra_args...
 					)));
 				break;
@@ -643,14 +704,14 @@ void def_instruction_op2_MI(
 					ToByteVector(CallInstrEmuFunc(
 						instr_emu_func,
 						emu.memory.Read<OPtype64>(static_cast<OPtype64>(op1) + disp).value(),
-						static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, offset_to_imm)),
+						static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, _offset_to_imm)),
 						extra_args...
 					)));
 				break;
 			default:
 				break;
 			}
-		}		
+		}
 		/*Only displacement*/
 		else if (!mod_rm.RM_Mod.RMRegSet && mod_rm.RM_Mod.disp) {
 			s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, 2).value();
@@ -661,7 +722,7 @@ void def_instruction_op2_MI(
 					ToByteVector(CallInstrEmuFunc(
 						instr_emu_func,
 						emu.memory.Read<OPtype16>(disp).value(),
-						static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, offset_to_imm)),
+						static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, _offset_to_imm)),
 						extra_args...
 					)));
 				break;
@@ -670,7 +731,7 @@ void def_instruction_op2_MI(
 					ToByteVector(CallInstrEmuFunc(
 						instr_emu_func,
 						emu.memory.Read<OPtype32>(disp).value(),
-						static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, offset_to_imm)),
+						static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, _offset_to_imm)),
 						extra_args...
 					)));
 				break;
@@ -679,7 +740,7 @@ void def_instruction_op2_MI(
 					ToByteVector(CallInstrEmuFunc(
 						instr_emu_func,
 						emu.memory.Read<OPtype64>(disp).value(),
-						static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, offset_to_imm)),
+						static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, _offset_to_imm)),
 						extra_args...
 					)));
 				break;
@@ -694,16 +755,18 @@ void def_instruction_op2_MI(
 		HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);
 		if (!sib_byte.valid)
 			return;
-		
+
+		auto sib_offset_to_imm = _offset_to_imm + 1;
+
 		if (mod_rm.RM_Mod.disp) {
 			s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, 3).value();
-			
+
 			switch (GET_OPSIZE_ENUM(ctx->osize)) {
 			case OperandSize::X86_Osize_16bit:
 				emu.memory.WriteFrom(calc_offset + disp, ToByteVector(CallInstrEmuFunc(
 					instr_emu_func,
 					emu.memory.Read<OPtype16>(calc_offset + disp).value(),
-					static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, offset_to_imm)),
+					static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, sib_offset_to_imm)),
 					extra_args...
 				)));
 				break;
@@ -711,7 +774,7 @@ void def_instruction_op2_MI(
 				emu.memory.WriteFrom(calc_offset + disp, ToByteVector(CallInstrEmuFunc(
 					instr_emu_func,
 					emu.memory.Read<OPtype32>(calc_offset + disp).value(),
-					static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, offset_to_imm)),
+					static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, sib_offset_to_imm)),
 					extra_args...
 				)));
 				break;
@@ -719,7 +782,7 @@ void def_instruction_op2_MI(
 				emu.memory.WriteFrom(calc_offset + disp, ToByteVector(CallInstrEmuFunc(
 					instr_emu_func,
 					emu.memory.Read<OPtype64>(calc_offset + disp).value(),
-					static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, offset_to_imm)),
+					static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, sib_offset_to_imm)),
 					extra_args...
 				)));
 				break;
@@ -731,7 +794,7 @@ void def_instruction_op2_MI(
 				emu.memory.WriteFrom(calc_offset, ToByteVector(CallInstrEmuFunc(
 					instr_emu_func,
 					emu.memory.Read<OPtype16>(calc_offset).value(),
-					static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, offset_to_imm)),
+					static_cast<OPtype16>(ReadFromVec<Immtype16>(inst, sib_offset_to_imm)),
 					extra_args...
 				)));
 				break;
@@ -739,7 +802,7 @@ void def_instruction_op2_MI(
 				emu.memory.WriteFrom(calc_offset, ToByteVector(CallInstrEmuFunc(
 					instr_emu_func,
 					emu.memory.Read<OPtype32>(calc_offset).value(),
-					static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, offset_to_imm)),
+					static_cast<OPtype32>(ReadFromVec<Immtype32>(inst, sib_offset_to_imm)),
 					extra_args...
 				)));
 				break;
@@ -747,12 +810,55 @@ void def_instruction_op2_MI(
 				emu.memory.WriteFrom(calc_offset, ToByteVector(CallInstrEmuFunc(
 					instr_emu_func,
 					emu.memory.Read<OPtype64>(calc_offset).value(),
-					static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, offset_to_imm)),
+					static_cast<OPtype64>(ReadFromVec<Immtype64>(inst, sib_offset_to_imm)),
 					extra_args...
 				)));
 				break;
 			}
 		}
 	}
-	return;	
+	return;
+}
+
+template <typename FuncType,
+	typename Immtype16, typename Immtype32, typename Immtype64,
+	typename... ExtraArgs>
+void def_instruction_op2_I(Emulator& emu,
+	x86Dcctx* ctx,
+	const std::vector<u8>& inst,
+	FuncType instr_emu_func,
+	u32 offset_to_imm,
+	ExtraArgs... extra_args) {
+
+	switch (GET_OPSIZE_ENUM(ctx->osize)) {
+	case OperandSize::X86_Osize_16bit:
+		emu.SetReg(Register::Rax, CallInstrEmuFunc(
+			instr_emu_func,
+			static_cast<u16>(Register::Rax),
+			static_cast<u16>(ReadFromVec<Immtype16>(inst, offset_to_imm)),
+			extra_args...
+		));
+		break;
+	case OperandSize::X86_Osize_32bit:
+		emu.SetReg(Register::Rax, CallInstrEmuFunc(
+			instr_emu_func,
+			static_cast<u32>(Register::Rax),
+			static_cast<u32>(ReadFromVec<Immtype32>(inst, offset_to_imm)),
+			extra_args...
+		));
+		break;
+	case OperandSize::X86_Osize_64bit:
+		emu.SetReg(Register::Rax, CallInstrEmuFunc(
+			instr_emu_func,
+			static_cast<u64>(Register::Rax),
+			static_cast<u64>(ReadFromVec<Immtype64>(inst, offset_to_imm)),
+			extra_args...
+		));
+		break;
+	default:
+		std::cout << "MI: Unknown opsizen";
+		break;
+	}
+
+	return;
 }

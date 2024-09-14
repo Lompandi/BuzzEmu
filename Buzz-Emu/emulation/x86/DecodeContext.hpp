@@ -52,6 +52,8 @@ struct x86Dcctx {
 	u8 p_sib : 1;
 	u8 p_vsib : 1;
 
+	u8 opcode_size;
+
 	size_t table_index;
 
 	u8* table_compressed;

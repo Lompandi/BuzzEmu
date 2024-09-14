@@ -37,6 +37,7 @@ public:
 	Run the machine
 	*/
 	void Run();
+	void TestRun();
 
 	/*
 	Reset all state
