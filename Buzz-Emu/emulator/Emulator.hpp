@@ -48,5 +48,24 @@ public:
 	Get a register from the guest
 	*/
 	u64 Reg(Register reg);
-	void SetReg(Register reg, u64 val);
+
+	void SetReg64(Register reg, u64 val);
+
+	template<typename TReg = unsigned long long>
+	void SetReg(Register reg, TReg val, RegisterMask extra_mask = RegisterMask::LowByte) {
+		u64 qval = Reg(reg);
+		//std::cout << "[SETREG] Original value: 0x" << std::hex << qval << " := 0x" << val << "\n";
+
+		unsigned long long mask = 0xFFFFFFFFFFFFFFFFUL << (int)(sizeof(TReg) * 8 + (extra_mask / 0xFF) * 8);;
+		mask |= extra_mask;
+		mask = (sizeof(TReg) == 8 ? 0 : mask); //64 bits will be inaccurate
+
+		//std::cout << "[SETREG] Mask: 0x" << std::hex << mask << "\n";
+
+		qval &= mask;
+		qval |= ((val << (mask / 0xFF) * 8) & ~mask);
+
+		//std::cout << "[SETREG] After value: 0x" << std::hex << qval << "\n";
+		SetReg64(reg, qval);
+	}
 };

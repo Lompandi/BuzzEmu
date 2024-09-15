@@ -214,7 +214,7 @@ u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, FlagsRegister64& flags) {
     return src1;//return original, not setting the register
 }
 
-u64 TestAndSetFlags(FlagsRegister64& flags, u64 src1, u64 src2) {
+u64 TestAndSetFlags(u64 src1, u64 src2, FlagsRegister64& flags) {
     u64 result = src1 & src2;
     SetLogicOpFlags(flags, result);
     return src1; //return original, not changine the register

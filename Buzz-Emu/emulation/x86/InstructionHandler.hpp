@@ -6,13 +6,12 @@
 
 #define BUZE_STANDARD_PARAM Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst
 
-#define push(expr) emu.memory.Write(emu.Reg(Register::Rsp) - sizeof(expr), ##expr); emu.SetReg(Register::Rsp, emu.Reg(Register::Rsp) - sizeof(expr))
+#define push(expr) emu.memory.Write(emu.Reg(Register::Rsp) - sizeof(expr), ##expr); emu.SetReg64(Register::Rsp, emu.Reg(Register::Rsp) - sizeof(expr))
 //if memonic collides, the number will be its opcode
 // 
 // TODO Instructions: 
 // {0xCC (INT3)}, 
 // {0xB0 (MOV r8, imm8  (OI))}, 
-// {0x88 (MOV r/m8, r8  (MR))}, 
 // 
 //Addition
 void Add_01(BUZE_STANDARD_PARAM);
@@ -45,6 +44,7 @@ void Or_0D(BUZE_STANDARD_PARAM);
 void Or_81(BUZE_STANDARD_PARAM);
 void Or_83(BUZE_STANDARD_PARAM);
 //Move
+void Mov_88(BUZE_STANDARD_PARAM);
 void Mov_89(BUZE_STANDARD_PARAM);
 void Mov_8B(BUZE_STANDARD_PARAM);
 //Move signed extended

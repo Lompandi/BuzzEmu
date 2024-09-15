@@ -1,6 +1,8 @@
 
 #include <iostream>
 
+#include <chrono>
+
 #include "emulator/Emulator.hpp"
 #include "emulation/x86/InstructionHandler.hpp"
 
@@ -52,12 +54,12 @@ int main()
     Emulator forked(emu);
 
     //Set the program entry points
-    emu.SetReg(Register::Rip, 0x00001000);
+    emu.SetReg<u64>(Register::Rip, 0x00001000);
 
     //set up a stack
     auto base = emu.memory.Alloc(3 * 1024).value(); 
     std::cout << "Stack: 0x" << std::hex << base << " - " << base + 0x2200 << "\n";
-    emu.SetReg(Register::Rsp, base + 3 * 1024);
+    emu.SetReg<u64>(Register::Rsp, base + 3 * 1024);
 
     // Example memory allocation and initialization
     auto argv = emu.memory.Alloc(8).value(); // Allocate memory for argv

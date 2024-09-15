@@ -51,7 +51,7 @@ u64 Emulator::Reg(Register reg) {
 	return registers[reg];
 }
 
-void Emulator::SetReg(Register reg, u64 val) {
+void Emulator::SetReg64(Register reg, u64 val) {
 	registers[reg] = val;
 }
 
@@ -128,7 +128,7 @@ void Emulator::Run() {
 			break;
 /*======================= Logical Or(0x0C) ===================================*/
 		case Instruction::OR_0C:
-			SetReg(Register::Rax, GET_L_REG(Reg(Register::Rax)) | ReadFromVec<u8>(inst, 1));
+			SetReg<u8>(Register::Rax, GET_L_REG(Reg(Register::Rax)) | ReadFromVec<u8>(inst, 1));
 			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) | ReadFromVec<u8>(inst, 1));
 			break;
 /*======================= Logical Or(0x0D) ===================================*/
@@ -142,9 +142,8 @@ void Emulator::Run() {
 			break;
 /*======================= Logical And(0x24) ==================================*/
 		case Instruction::AND_24:
-			
-			SetReg(Register::Rax, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
-			SetReg(Register::Rax, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
+			SetReg<u8>(Register::Rax, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
+			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
 			break;
 /*======================= Logical And(0x25) ==================================*/
 		case Instruction::AND_25:
@@ -163,18 +162,16 @@ void Emulator::Run() {
 			break;
 /*======================= Subtract(0x2C) =====================================*/
 		case Instruction::SUB_2C:
-			
-			SetReg(Register::Rax, SubAndSetFlags(GET_L_REG(Reg(Register::Rax)), ReadFromVec<u8>(inst, 1), flags));
+			SetReg<u8>(Register::Rax, SubAndSetFlags(GET_L_REG(Reg(Register::Rax)), ReadFromVec<u8>(inst, 1), flags));
 			break;
 /*======================= Subtract(0x2D) =====================================*/
 		case Instruction::SUB_2D:
-			
 			if (lendec.GetDecoderCtx().osize == X86_Osize_16bit && inst.size() == 3)
-				SetReg(Register::Rax, SubAndSetFlags(GET_X_REG(Reg(Register::Rax)), ReadFromVec<u16>(inst, 1), flags));
+				SetReg<u16>(Register::Rax, SubAndSetFlags(GET_X_REG(Reg(Register::Rax)), ReadFromVec<u16>(inst, 1), flags));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_32bit && inst.size() == 5)
-				SetReg(Register::Rax, SubAndSetFlags(GET_EXT_REG(Reg(Register::Rax)), ReadFromVec<u32>(inst, 1), flags));
+				SetReg<u32>(Register::Rax, SubAndSetFlags(GET_EXT_REG(Reg(Register::Rax)), ReadFromVec<u32>(inst, 1), flags));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 5)
-				SetReg(Register::Rax, SubAndSetFlags(Reg(Register::Rax), static_cast<u64>(ReadFromVec<u32>(inst, 1)), flags));
+				SetReg<u64>(Register::Rax, SubAndSetFlags(Reg(Register::Rax), static_cast<u64>(ReadFromVec<u32>(inst, 1)), flags));
 			break;
 /*======================= Exclusive or operation(0x31) =======================*/
 		case Instruction::XOR_31:
@@ -188,13 +185,11 @@ void Emulator::Run() {
 			break;
 /*======================= Exclusive or operation(0x34) =======================*/
 		case Instruction::XOR_34:
-			
-			SetReg(Register::Rax, GET_L_REG(Reg(Register::Rax)) ^ ReadFromVec<u8>(inst, 1));
+			SetReg<u8>(Register::Rax, GET_L_REG(Reg(Register::Rax)) ^ ReadFromVec<u8>(inst, 1));
 			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) ^ ReadFromVec<u8>(inst, 1));
 			break;
 /*======================= Exclusive or operation(0x35) =======================*/
 		case Instruction::XOR_35:
-			
 			Xor_35(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= Compare two operands (0x35) ========================*/
@@ -299,11 +294,13 @@ void Emulator::Run() {
 		case Instruction::TEST_85:
 			Test_85(*this, &lendec.GetDecoderCtx(), inst);
 			break;
-/*======================= Move instruction(0x89) ===============================*/
+/*======================= Move instruction		 ===============================*/
+		case Instruction::MOV_88:
+			Mov_88(*this, &lendec.GetDecoderCtx(), inst);
+			break;
 		case Instruction::MOV_89:
 			Mov_89(*this, &lendec.GetDecoderCtx(), inst);
 			break;
-/*======================= Move instruction(0x8B) ===============================*/
 		case Instruction::MOV_8B:
 			Mov_8B(*this, &lendec.GetDecoderCtx(), inst);
 			break;
@@ -326,11 +323,11 @@ void Emulator::Run() {
 /*======================= Move instruction(0xB8) ===============================*/
 		case Instruction::MOV_B8:
 			if (lendec.GetDecoderCtx().osize == X86_Osize_16bit && inst.size() == 3)
-				SetReg(Register::Rax, ReadFromVec<u16>(inst, 1));
+				SetReg<u16>(Register::Rax, ReadFromVec<u16>(inst, 1));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_32bit && inst.size() == 5)
-				SetReg(Register::Rax, ReadFromVec<u32>(inst, 1));
+				SetReg<u32>(Register::Rax, ReadFromVec<u32>(inst, 1));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 9)
-				SetReg(Register::Rax, ReadFromVec<u64>(inst, 1));
+				SetReg<u64>(Register::Rax, ReadFromVec<u64>(inst, 1));
 			break;
 		case Instruction::RET_C3:
 			std::cout << "Returning from procedure...\n";
@@ -367,37 +364,35 @@ void Emulator::Run() {
 /*========================================================================*/
 		//Increment the rip to get next instruction
 		debug_instr_count++;
-		SetReg(Register::Rip, pc + inst.size());
+		SetReg<u64>(Register::Rip, pc + inst.size());
 	}
 }
 
+
+//Also, these are safty checked version for the opcode copying..., add it back to the poriginal code
 void Emulator::TestRun() {
 	Ldasm lendec;
-
 	u64 debug_instr_count = 0;
+	u64 pc = 0;
+	u32 opcode = 0;
 
 	while (true) {
-		auto pc = Reg(Register::Rip);
-		std::cout << "[EMU] Executing instruction at 0x" << std::hex << pc;
-		std::vector<u8> inst;
+		if (pc > 0x1243) break;
 
-		//Fetch the current instructions
+		pc = Reg(Register::Rip);
+
+		std::vector<u8> inst;
+		// Fetch the current instructions
 		memory.ReadInstruction(lendec, pc, inst, (PERM_READ | PERM_EXEC));
 
-		u32 opcode;
+		// Extract context information
+		auto pos_opcode = lendec.GetDecoderCtx().pos_opcode;
+		auto opcode_size = lendec.GetDecoderCtx().opcode_size;
 
-		u8 modrm;
-		if (lendec.GetDecoderCtx().pfx_p_rex)
-			std::cout << " prefixed REX";
+		// Copy the opcode from the instruction vector
+		std::memcpy(&opcode, inst.data() + pos_opcode, opcode_size);
 
-		if (lendec.GetDecoderCtx().p_sib)
-			std::cout << " have SIB";
-
-		std::copy(inst.begin() + lendec.GetDecoderCtx().pos_opcode,
-			inst.begin() + lendec.GetDecoderCtx().pos_opcode + lendec.GetDecoderCtx().opcode_size,
-			&opcode); //copy the opcode  
-
-		std::cout << " with opcode 0x" << std::hex << opcode << "\n";
+		//std::cout << " with opcode 0x" << std::hex << opcode << "\n";
 
 		//Start to emulate instructions
 		switch (opcode) {
@@ -523,17 +518,17 @@ void Emulator::TestRun() {
 		case Instruction::_FF:
 			break;
 		default:
-			std::cout << "\n[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
-			std::cout << "[EMU] " << std::dec << debug_instr_count << " instructions executed before crashing.\n\n";
-			CrashDump(*this);
-			return;
+			std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+			//std::cout << "[EMU] " << std::dec << debug_instr_count << " instructions executed before crashing.\n\n";
+			//CrashDump(*this);
 			break;
 		}
 		/*========================================================================*/
 				//Increment the rip to get next instruction
 		debug_instr_count++;
-		SetReg(Register::Rip, pc + inst.size());
+		SetReg<u64>(Register::Rip, pc + inst.size());
 	}
+	return;
 }
 void Emulator::Reset(const Emulator& other) {
 	//Reset memory state

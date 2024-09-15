@@ -135,6 +135,7 @@
     <ClCompile Include="emulation\x86\InstructionHandler.cpp" />
     <ClCompile Include="emulation\x86\Decoder.cpp" />
     <ClCompile Include="emulation\x86\ModRM.cpp" />
+    <ClCompile Include="emulation\x86\Register.cpp" />
     <ClCompile Include="emulation\x86\Sib.cpp" />
     <ClCompile Include="emulator\Emulator.cpp" />
     <ClCompile Include="memory\Mmu.cpp" />

@@ -77,6 +77,6 @@ u64 AddAndSetFlags(u64 operand1, u64 operand2, FlagsRegister64& flags);
 
 u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, FlagsRegister64& flags);
 
-u64 TestAndSetFlags(FlagsRegister64& flags, u64 src1, u64 src2);
+u64 TestAndSetFlags(u64 src1, u64 src2, FlagsRegister64& flags);
 
 void SetLogicOpFlags(FlagsRegister64& flags, u64 value);

@@ -42,6 +42,9 @@
     <ClCompile Include="emulation\x86\Flags.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="emulation\x86\Register.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="memory\Mmu.hpp">

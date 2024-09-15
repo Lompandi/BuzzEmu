@@ -19,17 +19,17 @@ void Add_01(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
 	if (!ctx->p_sib) {
 		if (!mod_rm.RM_Mod.IsPtr) { //store to register
 			if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.SetReg(mod_rm.RM_Mod.reg,
+				emu.SetReg<u16>(mod_rm.RM_Mod.reg,
 					GET_X_REG(mod_rm.RM_Mod.reg_val) +
 					GET_X_REG(mod_rm.Reg.val));
 			}
 			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.SetReg(mod_rm.RM_Mod.reg,
+				emu.SetReg<u32>(mod_rm.RM_Mod.reg,
 					GET_EXT_REG(mod_rm.RM_Mod.reg_val) +
 					GET_EXT_REG(mod_rm.Reg.val));
 			}
 			else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {
-				emu.SetReg(mod_rm.RM_Mod.reg,
+				emu.SetReg<u64>(mod_rm.RM_Mod.reg,
 					mod_rm.RM_Mod.reg_val +
 					mod_rm.Reg.val);
 			}
@@ -204,7 +204,10 @@ void Or_83(BUZE_STANDARD_PARAM) {
 #pragma endregion
 
 #pragma region And (0x21)
-INSTRUCTION_LOGICAL_OP2_RM_REG(And, 21, &)
+void And_21(BUZE_STANDARD_PARAM) {
+
+}
+//INSTRUCTION_LOGICAL_OP2_RM_REG(And, 21, &)
 #pragma endregion
 #pragma region And (0x25)
 void And_25(BUZE_STANDARD_PARAM) {
@@ -373,7 +376,10 @@ void Sub_83(BUZE_STANDARD_PARAM) {
 #pragma endregion
 
 #pragma region Xor (0x31)
-INSTRUCTION_LOGICAL_OP2_RM_REG(Xor, 31, ^)
+void Xor_31(BUZE_STANDARD_PARAM) {
+
+}
+//INSTRUCTION_LOGICAL_OP2_RM_REG(Xor, 31, ^)
 #pragma endregion
 #pragma region Xor (0x33)
 void Xor_33(BUZE_STANDARD_PARAM) {
@@ -409,18 +415,26 @@ void Xor_83(BUZE_STANDARD_PARAM) {
 }
 #pragma endregion
 
+#pragma region Mov (0x88)
+void Mov_88(BUZE_STANDARD_PARAM) {
+	ModRM modrm;
+	Handle_ModRM(emu, ctx, modrm);
+	def_instruction_op2_MR8<decltype(MovAndSetFlags)>
+		(emu, ctx, inst, MovAndSetFlags, modrm, modrm.RM_Mod.reg_val, modrm.Reg.val);
+}
+#pragma endregion
 #pragma region Mov (0x89)
 void Mov_89(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
 	OperandSize opsize = ctx->osize; ModRM mod_rm; Handle_ModRM(emu, ctx, mod_rm); if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet) return; if (!ctx->p_sib) {
 		if (!mod_rm.RM_Mod.IsPtr && mod_rm.RM_Mod.RMRegSet) {
 			if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.SetReg(mod_rm.RM_Mod.reg, static_cast<u16>(mod_rm.Reg.val & 0xFFFF));
+				emu.SetReg<u16>(mod_rm.RM_Mod.reg, static_cast<u16>(mod_rm.Reg.val & 0xFFFF));
 			}
 			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.SetReg(mod_rm.RM_Mod.reg, static_cast<u32>(mod_rm.Reg.val & 0xFFFFFFFF));
+				emu.SetReg<u32>(mod_rm.RM_Mod.reg, static_cast<u32>(mod_rm.Reg.val & 0xFFFFFFFF));
 			}
 			else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {
-				emu.SetReg(mod_rm.RM_Mod.reg, mod_rm.Reg.val);
+				emu.SetReg<u64>(mod_rm.RM_Mod.reg, mod_rm.Reg.val);
 			}
 		}
 		else if (!mod_rm.RM_Mod.disp) {
@@ -519,11 +533,14 @@ void Test_84(BUZE_STANDARD_PARAM) {
 	ModRM modrm;
 	Handle_ModRM(emu, ctx, modrm);
 	def_instruction_op2_MR8<decltype(TestAndSetFlags)>
-		(emu, ctx, inst, TestAndSetFlags, modrm, modrm.RM_Mod.reg_val, modrm.Reg.val);
+		(emu, ctx, inst, TestAndSetFlags, modrm, modrm.RM_Mod.reg_val, modrm.Reg.val, emu.flags);
 }
 #pragma endregion
 #pragma region Test (0x85)
-INSTRUCTION_OP2_MR(Test, 85, 
+void Test_85(BUZE_STANDARD_PARAM) {
+	
+}
+/*INSTRUCTION_OP2_MR(Test, 85,
 TestAndSetFlags(emu.flags,
 GET_X_REG(mod_rm.RM_Mod.reg_val),
 GET_X_REG(mod_rm.Reg.val)),
@@ -568,13 +585,13 @@ emu.memory.Read<u32>(calc_offset).value(),
 GET_EXT_REG(mod_rm.Reg.val)),
 TestAndSetFlags(emu.flags,
 emu.memory.Read<u64>(calc_offset).value(),
-mod_rm.Reg.val))
+mod_rm.Reg.val))*/
 #pragma endregion
 
 //TODO: probably add an method called "Push" in emu to assist the operation for pushing the values onto the stack
 #pragma region Push (0x50-0x57)
 void Push_50_57(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
-	emu.SetReg(Register::Rsp, emu.Reg(Register::Rsp) - 8);
+	emu.SetReg<u64>(Register::Rsp, emu.Reg(Register::Rsp) - 8);
 	if (!ctx->pfx_p_rex)
 		emu.memory.Write(emu.Reg(Register::Rsp), emu.Reg(static_cast<Register>(inst[INSTR_POS(0)] - 0x50)));
 	else if (_REX_B(ctx->pfx_rex)) {
@@ -588,8 +605,8 @@ void Push_50_57(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
 void Call_E8(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc) {
 	//Push the rip(add to next instruction after the call) onto the stack
 	//rip = rip + instruction size(set to next instruction)
-	emu.SetReg(Register::Rip, emu.Reg(Register::Rip) + inst.size());
-	emu.SetReg(Register::Rsp, emu.Reg(Register::Rsp) - 8);
+	emu.SetReg<u64>(Register::Rip, emu.Reg(Register::Rip) + inst.size());
+	emu.SetReg<u64>(Register::Rsp, emu.Reg(Register::Rsp) - 8);
 	emu.memory.Write(emu.Reg(Register::Rsp), emu.Reg(Register::Rip));
 
 	pc = emu.Reg(Register::Rip) + ReadFromVec<s32>(inst, INSTR_POS(1)) - inst.size(); //rel32
@@ -600,7 +617,7 @@ void Call_E8(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc)
 void Call_FF_reg2(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc) {
 
 	auto next_instr_addr = emu.Reg(Register::Rip) + inst.size() + (ctx->pfx_p_rex ? 1 : 0);
-	emu.SetReg(Register::Rsp, emu.Reg(Register::Rsp) - 8);
+	emu.SetReg<u64>(Register::Rsp, emu.Reg(Register::Rsp) - 8);
 	emu.memory.Write(emu.Reg(Register::Rsp), next_instr_addr);
 
 	VirtualAddr call_addr = 0;
@@ -708,6 +725,6 @@ void Ret_C3(BUZE_STANDARD_PARAM, u64& pc) {
 	pc = emu.memory.Read<VirtualAddr>(emu.Reg(Register::Rsp)).value();
 
 	// Adjust the stack pointer to remove the return address from the stack
-	emu.SetReg(Register::Rsp, emu.Reg(Register::Rsp) + 8); // For 64-bit addresses
+	emu.SetReg<u64>(Register::Rsp, emu.Reg(Register::Rsp) + 8); // For 64-bit addresses
 }
 #pragma endregion
