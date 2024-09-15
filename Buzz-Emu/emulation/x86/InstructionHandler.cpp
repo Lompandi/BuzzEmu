@@ -719,6 +719,22 @@ void Call_FF_reg2(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64
 }
 #pragma endregion
 
+#pragma region Jmp (0xE9)
+void Jmp_E9(BUZE_STANDARD_PARAM, u64& pc) {
+	switch (GET_OPSIZE_ENUM(ctx->osize))
+	{
+	case OperandSize::X86_Osize_16bit:
+		pc = emu.Reg(Register::Rip) + static_cast<s64>(ReadFromVec<s16>(inst, 1));
+		break;
+	case OperandSize::X86_Osize_32bit:
+		pc = emu.Reg(Register::Rip) + static_cast<s64>(ReadFromVec<s32>(inst, 1));
+		break;
+	default:
+		break;
+	}
+}
+#pragma endregion
+
 #pragma region Ret (0xC3)
 void Ret_C3(BUZE_STANDARD_PARAM, u64& pc) {
 	// Read the return address from the stack (top of stack)

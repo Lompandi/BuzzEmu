@@ -71,6 +71,19 @@ int main()
     push(argv);   // Push argv (pointer to the argument vector)
     push(1ull);   // Push argc (number of arguments; in this case, 1 argument)
 
+    /*while (true) {
+        auto num = emu.Run();
+        switch (num) {
+            //Syscall processing, which is not going to be emulated in guest 
+        case VmExit::Syscall:
+            switch (emu.Reg(Register::Rax)) {
+            case 0x2C: //NtTerminateProcess
+                //exit
+                break;
+            }
+        }
+    }*/
+
     emu.TestRun();
 }
 

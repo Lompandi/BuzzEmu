@@ -101,6 +101,12 @@
     <ClInclude Include="emulation\x86\Flags.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="emulator\VmExit.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="emulation\x86\OperandEncoding.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="trash_can\old_instruction_handlers.txt" />

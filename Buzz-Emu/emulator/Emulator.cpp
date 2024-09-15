@@ -3,6 +3,7 @@
 
 #include "Emulator.hpp"
 
+#include "VmExit.hpp"
 #include "../core/Fs.hpp"
 #include "../emulation/x86/ModRM.hpp"
 #include "../emulation/x86/InstructionHandler.hpp"
@@ -80,7 +81,7 @@ void DEBUG_FUNC CrashDump(Emulator& emu) {
 
 //TODO: jump currently only increment the offset by rel8 from current pc, 
 //but i need to change it to match pc + instruction length + rel8
-void Emulator::Run() {
+VmExit Emulator::Run() {
 	Ldasm lendec;
 
 	u64 debug_instr_count = 0;
@@ -337,10 +338,12 @@ void Emulator::Run() {
 /*============================ Call procedure (0xE8) ===========================*/
 		case Instruction::CALL_E8:
 			std::cout << "Calling functions\n";
-
 			Call_E8(*this, &lendec.GetDecoderCtx(), inst, pc);
 			break;
-/*======================= Jump short (0xEB) ====================================*/
+/*======================= Jump short        ====================================*/
+		case Instruction::JMP_E9:
+			Jmp_E9(*this, &lendec.GetDecoderCtx(), inst, pc);
+			break;
 		case Instruction::JMP_EB:
 			pc = Reg(Register::Rip) + static_cast<s64>(ReadFromVec<s8>(inst, 1));
 			break;
@@ -354,11 +357,12 @@ void Emulator::Run() {
 				break;
 			}
 			break;
+		case Instruction::SYSCALL_0F05:
+			return VmExit::Syscall;
 		default:
 			std::cout << "\n[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
 			std::cout << "[EMU] " << std::dec << debug_instr_count << " instructions executed before crashing.\n\n";
 			CrashDump(*this);
-			return;
 			break;
 		}
 /*========================================================================*/
@@ -392,7 +396,7 @@ void Emulator::TestRun() {
 		// Copy the opcode from the instruction vector
 		std::memcpy(&opcode, inst.data() + pos_opcode, opcode_size);
 
-		//std::cout << " with opcode 0x" << std::hex << opcode << "\n";
+		//std::cout << "0x" <<std::hex << pc << " with opcode 0x" << std::hex << opcode << "\n";
 
 		//Start to emulate instructions
 		switch (opcode) {

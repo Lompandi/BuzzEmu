@@ -3,6 +3,7 @@
 #include <array>
 #include <string>
 
+#include "VmExit.hpp"
 #include "../memory/Mmu.hpp"
 #include "../memory/Section.hpp"
 #include "../emulation/x86/Flags.hpp"
@@ -36,7 +37,7 @@ public:
 	/*
 	Run the machine
 	*/
-	void Run();
+	VmExit Run();
 	void TestRun();
 
 	/*
@@ -51,21 +52,42 @@ public:
 
 	void SetReg64(Register reg, u64 val);
 
-	template<typename TReg = unsigned long long>
-	void SetReg(Register reg, TReg val, RegisterMask extra_mask = RegisterMask::LowByte) {
-		u64 qval = Reg(reg);
-		//std::cout << "[SETREG] Original value: 0x" << std::hex << qval << " := 0x" << val << "\n";
+	template <typename TReg = unsigned long long>
+	void SetReg(Register reg, TReg val, ByteRegister extra_mask = ByteRegister::LowByte) {
+		// Define masks and shifts for each register portion
+		constexpr uint64_t masks[] = {
+			0xFFFFFFFFFFFF00FFULL, // Mask for AH (clear high 8 bits of AX)
+			0xFFFFFFFFFFFFFF00ULL,  // Mask for AL (clear low 8 bits of AX)
+			0xFFFFFFFFFFFF0000ULL, // Mask for AX (clear lower 16 bits)
+			0xFFFFFFFF00000000ULL,
+			0xFFFFFFFF00000000ULL, // Mask for EAX (clear lower 32 bits)
+			0x0,
+			0x0,
+			0x0000000000000000ULL,
+			0x0000000000000000ULL, // Mask for RAX (no change)
+		};
 
-		unsigned long long mask = 0xFFFFFFFFFFFFFFFFUL << (int)(sizeof(TReg) * 8 + (extra_mask / 0xFF) * 8);;
-		mask |= extra_mask;
-		mask = (sizeof(TReg) == 8 ? 0 : mask); //64 bits will be inaccurate
+		constexpr int shifts[] = {
+			8,        // AH (shift by 8 bits)
+			0,        // RAX (no shift)
+			0,        // EAX (no shift, value is 32-bit)
+			0,        // AX (no shift, value is 16-bit)
+			0,         // AL (no shift, value is 8-bit)
+			0,
+			0,
+			0,
+			0,
+		};
+		//std::cout << "Before: 0x" << std::hex << Reg(reg) << "\n";
 
-		//std::cout << "[SETREG] Mask: 0x" << std::hex << mask << "\n";
+		uint64_t mask = masks[sizeof(TReg) - (extra_mask & 1)];
+		uint64_t shift = shifts[sizeof(TReg) - (extra_mask & 1)];
+		uint64_t shifted_val = (static_cast<uint64_t>(val) << shift) & ~mask;
 
-		qval &= mask;
-		qval |= ((val << (mask / 0xFF) * 8) & ~mask);
+		//std::cout << "Mask: \t0x" << std::hex << mask << "\n";
 
-		//std::cout << "[SETREG] After value: 0x" << std::hex << qval << "\n";
-		SetReg64(reg, qval);
+		//std::cout << "After:  0x" << std::hex << (u64)((Reg(reg)) & mask | shifted_val) << "\n";
+
+		SetReg64(reg, (Reg(reg) & mask) | shifted_val);
 	}
 };
