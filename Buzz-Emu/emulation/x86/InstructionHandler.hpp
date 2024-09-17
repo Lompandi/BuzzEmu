@@ -47,13 +47,18 @@ void Or_83(BUZE_STANDARD_PARAM);
 void Mov_88(BUZE_STANDARD_PARAM);
 void Mov_89(BUZE_STANDARD_PARAM);
 void Mov_8B(BUZE_STANDARD_PARAM);
+void Mov_B8_BF(BUZE_STANDARD_PARAM);
 //Move signed extended
 void Movsxd_63(BUZE_STANDARD_PARAM);
+//Move zero-extended
+void Movzx_0FB6(BUZE_STANDARD_PARAM);
 //Logical compare
 void Test_84(BUZE_STANDARD_PARAM);
 void Test_85(BUZE_STANDARD_PARAM);
 //Push values onto the stack
 void Push_50_57(BUZE_STANDARD_PARAM); 
+//Pop values from the stack
+void Pop_58_5F(BUZE_STANDARD_PARAM);
 //Call procedure
 void Call_E8(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc);
 void Call_FF_reg2(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc);

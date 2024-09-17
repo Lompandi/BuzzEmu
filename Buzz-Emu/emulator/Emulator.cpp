@@ -1,4 +1,5 @@
 
+#include <bit>
 #include <iostream>
 
 #include "Emulator.hpp"
@@ -8,11 +9,7 @@
 #include "../emulation/x86/ModRM.hpp"
 #include "../emulation/x86/InstructionHandler.hpp"
 
-//#define EMU_CHECK_OP_SIZE(n) if (!lendec.GetDecoderCtx().pfx_p_osize || lendec.GetDecoderCtx().osize != ##n) \
-//break
-//use this aftrer jump to not affect the pc 
-#define jmp_cleanup inst.clear(); \
-erased = 0
+#define instruction_param *this, &lendec.GetDecoderCtx(), inst
 
 //TUTORIAL AT: https://youtu.be/iM3s8-umRO0?t=28749 
 
@@ -79,8 +76,12 @@ void DEBUG_FUNC CrashDump(Emulator& emu) {
 	std::cout << "OF: " << std::hex <<emu.flags.OF << "\n\n"; // Overflow Flag
 }
 
-//TODO: jump currently only increment the offset by rel8 from current pc, 
-//but i need to change it to match pc + instruction length + rel8
+void opcode_cpy(uint8_t* opcode, const uint8_t* src, size_t size) {
+	for (size_t i = 0; i < size; ++i) {
+		opcode[i] = src[size - i - 1];
+	}
+}
+//TODO: currently using lineaer emulating , will change it to table if so
 VmExit Emulator::Run() {
 	Ldasm lendec;
 
@@ -94,6 +95,7 @@ VmExit Emulator::Run() {
 		std::vector<u8> inst;
 		//Fetch the current instructions
 		memory.ReadInstruction(lendec, pc, inst, (PERM_READ | PERM_EXEC));
+		std::cout << "opcode size: " << lendec.GetDecoderCtx().opcode_size << "\n";
 		
 		u32 opcode;
 		u8 modrm;
@@ -103,9 +105,13 @@ VmExit Emulator::Run() {
 		if (lendec.GetDecoderCtx().p_sib)
 			std::cout << " have SIB";
 
-		std::copy(inst.begin() + lendec.GetDecoderCtx().pos_opcode,
+		/*std::copy(inst.begin() + lendec.GetDecoderCtx().pos_opcode,
 			inst.begin() + lendec.GetDecoderCtx().pos_opcode + lendec.GetDecoderCtx().opcode_size, 
-			&opcode); //copy the opcode  
+			&opcode); //copy the opcode */ 
+
+		opcode_cpy((u8*)&opcode,
+			inst.data() + lendec.GetDecoderCtx().pos_opcode,
+			lendec.GetDecoderCtx().opcode_size);
 
 		std::cout << " with opcode 0x" << std::hex << opcode << "\n";
 
@@ -190,7 +196,7 @@ VmExit Emulator::Run() {
 			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) ^ ReadFromVec<u8>(inst, 1));
 			break;
 /*======================= Exclusive or operation(0x35) =======================*/
-		case Instruction::XOR_35:
+		case Instruction::XOR_35: 
 			Xor_35(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*======================= Compare two operands (0x35) ========================*/
@@ -222,6 +228,30 @@ VmExit Emulator::Run() {
 		case Instruction::PUSH_57:
 			Push_50_57(*this, &lendec.GetDecoderCtx(), inst);
 			break;
+		case Instruction::POP_58:
+			Pop_58_5F(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+		case Instruction::POP_59:
+			Pop_58_5F(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+		case Instruction::POP_5A:
+			Pop_58_5F(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+		case Instruction::POP_5B:
+			Pop_58_5F(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+		case Instruction::POP_5C:
+			Pop_58_5F(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+		case Instruction::POP_5D:
+			Pop_58_5F(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+		case Instruction::POP_5E:
+			Pop_58_5F(*this, &lendec.GetDecoderCtx(), inst);
+			break;
+		case Instruction::POP_5F:
+			Pop_58_5F(*this, &lendec.GetDecoderCtx(), inst);
+			break;
 /*======================= Move with sign-extended (0x63) =====================*/
 		case Instruction::MOVSXD_63:
 			Movsxd_63(*this, &lendec.GetDecoderCtx(), inst);
@@ -240,6 +270,10 @@ VmExit Emulator::Run() {
 			pc = Reg(Register::Rip) + (this->flags.SF != this->flags.OF ? ReadFromVec<s8>(inst, 1) : 0);
 			std::cout << "JL Rel8: 0x" << std::hex << (int)ReadFromVec<s8>(inst, 1) << "\n";
 			std::cout << "Pc after JL: 0x" << std::hex << pc << "\n";
+			break;
+		case Instruction::JLE_7E:
+			pc = Reg(Register::Rip) + 
+				(this->flags.ZF == 1 || this->flags.SF != this->flags.OF ? ReadFromVec<s8>(inst, 1) : 0);
 			break;
 		case Instruction::_81:
 			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
@@ -303,7 +337,7 @@ VmExit Emulator::Run() {
 			Mov_89(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 		case Instruction::MOV_8B:
-			Mov_8B(*this, &lendec.GetDecoderCtx(), inst);
+			Mov_8B(instruction_param);
 			break;
 /*======================= No operation instruction =======================*/
 		case Instruction::NOP:
@@ -321,14 +355,29 @@ VmExit Emulator::Run() {
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 5)
 				SetLogicOpFlags(flags, Reg(Register::Rax) & static_cast<u64>(ReadFromVec<u32>(inst, 1)));
 			break;
-/*======================= Move instruction(0xB8) ===============================*/
 		case Instruction::MOV_B8:
-			if (lendec.GetDecoderCtx().osize == X86_Osize_16bit && inst.size() == 3)
-				SetReg<u16>(Register::Rax, ReadFromVec<u16>(inst, 1));
-			else if (lendec.GetDecoderCtx().osize == X86_Osize_32bit && inst.size() == 5)
-				SetReg<u32>(Register::Rax, ReadFromVec<u32>(inst, 1));
-			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 9)
-				SetReg<u64>(Register::Rax, ReadFromVec<u64>(inst, 1));
+			Mov_B8_BF(instruction_param);
+			break;
+		case Instruction::MOV_B9:
+			Mov_B8_BF(instruction_param);
+			break;
+		case Instruction::MOV_BA:
+			Mov_B8_BF(instruction_param);
+			break;
+		case Instruction::MOV_BB:
+			Mov_B8_BF(instruction_param);
+			break;
+		case Instruction::MOV_BC:
+			Mov_B8_BF(instruction_param);
+			break;
+		case Instruction::MOV_BD:
+			Mov_B8_BF(instruction_param);
+			break;
+		case Instruction::MOV_BE:
+			Mov_B8_BF(instruction_param);
+			break;
+		case Instruction::MOV_BF:
+			Mov_B8_BF(instruction_param);
 			break;
 		case Instruction::RET_C3:
 			std::cout << "Returning from procedure...\n";
@@ -350,6 +399,9 @@ VmExit Emulator::Run() {
 		case Instruction::_FF:
 			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
 			{
+			case 0x01:
+				//TODO
+				break;
 			case 0x02:
 				Call_FF_reg2(*this, &lendec.GetDecoderCtx(), inst, pc);
 				break;
@@ -359,6 +411,9 @@ VmExit Emulator::Run() {
 			break;
 		case Instruction::SYSCALL_0F05:
 			return VmExit::Syscall;
+		case Instruction::MOVZX_0FB6:
+			Movzx_0FB6(instruction_param);
+			break;
 		default:
 			std::cout << "\n[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
 			std::cout << "[EMU] " << std::dec << debug_instr_count << " instructions executed before crashing.\n\n";
@@ -372,29 +427,31 @@ VmExit Emulator::Run() {
 	}
 }
 
-
 //Also, these are safty checked version for the opcode copying..., add it back to the poriginal code
 void Emulator::TestRun() {
 	Ldasm lendec;
 	u64 debug_instr_count = 0;
 	u64 pc = 0;
-	u32 opcode = 0;
 
 	while (true) {
 		if (pc > 0x1243) break;
 
 		pc = Reg(Register::Rip);
 
+		u32 opcode = 0;
+
 		std::vector<u8> inst;
 		// Fetch the current instructions
 		memory.ReadInstruction(lendec, pc, inst, (PERM_READ | PERM_EXEC));
+		//std::cout << "opcode size: " << (int)(lendec.GetDecoderCtx().opcode_size) << "\n";
+
 
 		// Extract context information
 		auto pos_opcode = lendec.GetDecoderCtx().pos_opcode;
 		auto opcode_size = lendec.GetDecoderCtx().opcode_size;
 
 		// Copy the opcode from the instruction vector
-		std::memcpy(&opcode, inst.data() + pos_opcode, opcode_size);
+		opcode_cpy((u8*)&opcode, inst.data() + pos_opcode, opcode_size);
 
 		//std::cout << "0x" <<std::hex << pc << " with opcode 0x" << std::hex << opcode << "\n";
 
@@ -467,6 +524,22 @@ void Emulator::TestRun() {
 			break;
 		case Instruction::PUSH_57:
 			break;
+		case Instruction::POP_58:
+			break;
+		case Instruction::POP_59:
+			break;
+		case Instruction::POP_5A:
+			break;
+		case Instruction::POP_5B:
+			break;
+		case Instruction::POP_5C:
+			break;
+		case Instruction::POP_5D:
+			break;
+		case Instruction::POP_5E:
+			break;
+		case Instruction::POP_5F:
+			break;
 			/*======================= Move with sign-extended (0x63) =====================*/
 		case Instruction::MOVSXD_63:
 			break;
@@ -477,6 +550,8 @@ void Emulator::TestRun() {
 			break;
 			/*======================= Jump if less (0x7C) ================================*/
 		case Instruction::JL_7C:
+			break;
+		case Instruction::JLE_7E:
 			break;
 		case Instruction::_81:
 			break;
@@ -509,6 +584,20 @@ void Emulator::TestRun() {
 			/*======================= Move instruction(0xB8) ===============================*/
 		case Instruction::MOV_B8:
 			break;
+		case Instruction::MOV_B9:
+			break;
+		case Instruction::MOV_BA:
+			break;
+		case Instruction::MOV_BB:
+			break;
+		case Instruction::MOV_BC:
+			break;
+		case Instruction::MOV_BD:
+			break;
+		case Instruction::MOV_BE:
+			break;
+		case Instruction::MOV_BF:
+			break;
 		case Instruction::RET_C3:
 			break;
 		case 0xCC:
@@ -516,10 +605,14 @@ void Emulator::TestRun() {
 			/*============================ Call procedure (0xE8) ===========================*/
 		case Instruction::CALL_E8:
 			break;
+		case Instruction::JMP_E9:
+			break;
 			/*======================= Jump short (0xEB) ====================================*/
 		case Instruction::JMP_EB:
 			break;
 		case Instruction::_FF:
+			break;
+		case Instruction::MOVZX_0FB6:
 			break;
 		default:
 			std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";

@@ -496,6 +496,19 @@ void Mov_8B(BUZE_STANDARD_PARAM) {
 		u16, u32, u64>(emu, ctx, inst, MovAndSetFlags, modrm, modrm.Reg.val, modrm.RM_Mod.reg_val);
 }
 #pragma endregion
+#pragma region MOV (0xB8 - 0xBF)
+void Mov_B8_BF(BUZE_STANDARD_PARAM) {
+	auto reg_extended = _REX_B(ctx->pfx_rex) << 3; // 1 * 8, 0 * 8
+	auto reg = static_cast<Register>((inst[INSTR_POS(0)] - 0xB8) + reg_extended);
+
+	if (ctx->osize == X86_Osize_16bit)
+		emu.SetReg<u16>(reg, ReadFromVec<u16>(inst, INSTR_POS(1)));
+	else if (ctx->osize == X86_Osize_32bit)
+		emu.SetReg<u32>(reg, ReadFromVec<u32>(inst, INSTR_POS(1)));
+	else if (ctx->osize == X86_Osize_64bit)
+		emu.SetReg<u64>(reg, ReadFromVec<u64>(inst, INSTR_POS(1)));
+}
+#pragma endregion
 
 #pragma region Movsxd (0x63)
 void Movsxd_63(BUZE_STANDARD_PARAM) {
@@ -503,8 +516,21 @@ void Movsxd_63(BUZE_STANDARD_PARAM) {
 	Handle_ModRM(emu, ctx, modrm);
 
 	def_instruction_op2_RM<decltype(MovAndSetFlags),
+		s16, s32, s64,
+		s16, s32, s32>(emu, ctx, inst, MovAndSetFlags, modrm, modrm.Reg.val, modrm.RM_Mod.reg_val);
+}
+#pragma endregion
+
+#pragma region Movzx(0x0FB6)
+void Movzx_0FB6(BUZE_STANDARD_PARAM) {
+	ModRM modrm;
+	Handle_ModRM(emu, ctx, modrm);
+
+	redef_modrm_rm8(emu, modrm); //switch to 8-bit registering mode
+
+	def_instruction_op2_RM<decltype(MovAndSetFlags),
 		u16, u32, u64,
-		u16, u32, u32>(emu, ctx, inst, MovAndSetFlags, modrm, modrm.Reg.val, modrm.RM_Mod.reg_val);
+		u8, u8, u8>(emu, ctx, inst, MovAndSetFlags, modrm, modrm.Reg.val, modrm.RM_Mod.reg_val);
 }
 #pragma endregion
 
@@ -532,6 +558,10 @@ void Cmp_83(BUZE_STANDARD_PARAM) {
 void Test_84(BUZE_STANDARD_PARAM) {
 	ModRM modrm;
 	Handle_ModRM(emu, ctx, modrm);
+	//full 8-bit mode
+	redef_modrm_rm8(emu, modrm);
+	redef_modrm_reg8(emu, modrm);
+
 	def_instruction_op2_MR8<decltype(TestAndSetFlags)>
 		(emu, ctx, inst, TestAndSetFlags, modrm, modrm.RM_Mod.reg_val, modrm.Reg.val, emu.flags);
 }
@@ -597,6 +627,17 @@ void Push_50_57(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
 	else if (_REX_B(ctx->pfx_rex)) {
 		emu.memory.Write(emu.Reg(Register::Rsp), emu.Reg(static_cast<Register>((inst[INSTR_POS(0)] - 0x50) + 8)));
 		std::cout << "PUSH: extended register used: R" << std::dec << (int)((inst[INSTR_POS(0)] - 0x50) + 8) << std::hex << "\n";
+	}
+}
+#pragma endregion
+
+#pragma region Pop (0x58-0x5F)
+void Pop_58_5F(BUZE_STANDARD_PARAM) {
+	if (!ctx->pfx_p_rex)
+		emu.SetReg<u64>(static_cast<Register>(inst[INSTR_POS(0)] - 0x50), emu.memory.Read<u64>(emu.Reg(Register::Rsp)).value());
+	else if (_REX_B(ctx->pfx_rex)) {
+		emu.SetReg(static_cast<Register>((inst[INSTR_POS(0)] - 0x50) + 8), emu.memory.Read<u64>(emu.Reg(Register::Rsp)).value());
+		std::cout << "POP: extended register used: R" << std::dec << (int)((inst[INSTR_POS(0)] - 0x50) + 8) << std::hex << "\n";
 	}
 }
 #pragma endregion

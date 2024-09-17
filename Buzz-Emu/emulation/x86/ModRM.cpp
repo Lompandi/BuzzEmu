@@ -49,6 +49,8 @@ void Clear_ModRM(ModRM* modrm) {
 	modrm->RM_Mod.IsPtr = false;
 	modrm->RM_Mod.reg_val = 0;
 	modrm->RM_Mod.RMRegSet = false;
+	modrm->Reg.h_l = ByteRegister::LowByte;
+	modrm->RM_Mod.h_l = ByteRegister::LowByte;
 }
 
 #define DEBUG_LOG(msg, ...) \
@@ -108,4 +110,54 @@ void Handle_ModRM(Emulator& emu, x86Dcctx* ctx, ModRM& modrm) {
     else {
         DEBUG_LOG("No displacement value found in ModRM");
     }
+}
+
+//helper function to get the 8 bit r/m (r/m8)
+//tables for resetting 
+constexpr Register redef_8bit_regs[8] = {
+		Register::Rax,
+		Register::Rcx,
+		Register::Rdx,
+		Register::Rbx,
+		Register::Rax,
+		Register::Rcx,
+		Register::Rdx,
+		Register::Rbx
+};
+
+constexpr u64 redef_8bit_mask[8] = {
+	0x00000000000000FF,
+	0x00000000000000FF,
+	0x00000000000000FF,
+	0x00000000000000FF,
+	0x000000000000FF00,
+	0x000000000000FF00,
+	0x000000000000FF00,
+	0x000000000000FF00,
+};
+
+constexpr ByteRegister redef_8bit_setreg_mask[8] = {
+	ByteRegister::LowByte,
+	ByteRegister::LowByte,
+	ByteRegister::LowByte,
+	ByteRegister::LowByte,
+	ByteRegister::HighByte,
+	ByteRegister::HighByte,
+	ByteRegister::HighByte,
+	ByteRegister::HighByte,
+};
+
+void redef_modrm_rm8(Emulator& emu, ModRM& modrm) {
+	auto mask = redef_8bit_mask[modrm.RM_Mod.reg];
+	modrm.RM_Mod.h_l = redef_8bit_setreg_mask[modrm.RM_Mod.reg];
+	modrm.RM_Mod.reg = redef_8bit_regs[std::to_underlying(modrm.RM_Mod.reg)];
+	modrm.RM_Mod.reg_val = emu.Reg(modrm.RM_Mod.reg) & mask;
+}
+
+void redef_modrm_reg8(Emulator& emu, ModRM& modrm) {
+	auto mask = redef_8bit_mask[modrm.Reg.reg];
+	modrm.Reg.h_l = redef_8bit_setreg_mask[modrm.Reg.reg];
+	/*swaps the registers into 8-bit mode*/
+	modrm.Reg.reg = redef_8bit_regs[std::to_underlying(modrm.Reg.reg)];
+	modrm.Reg.val = emu.Reg(modrm.Reg.reg) & mask;
 }

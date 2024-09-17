@@ -24,19 +24,20 @@ enum Register : u32 {
 	Rip,
 };
 
-struct RegisterState {
-	Register	reg;
-	u64			val;
-};
-
-
 constexpr u64 register_mask_full = 0xFFFFFFFFFFFFFFFF;
 
-enum ByteRegister : u8{
+enum ByteRegister : u8 {
 	LowByte = 0x00,
 	HighByte = 0xFF,
 };
 
 constexpr u64 mask_regs_high = 0x000000000000FF00;
 constexpr u64 mask_regs_low = 0x00000000000000FF;
+
+struct RegisterState {
+	Register	 reg;
+	ByteRegister h_l;
+	u64			 val;
+};
+
 u8 FetchByteRegs(u64 data, u64 mask);
