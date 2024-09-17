@@ -5,135 +5,13 @@
 #include "InstructionHandler.hpp"
 
 #pragma region Add (0x01)
-void Add_01(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
-	OperandSize opsize = ctx->osize;
-
-	ModRM mod_rm;
-	Handle_ModRM(emu, ctx, mod_rm);
-
-	if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet)
-		return;
-
-	//=====================No SIB===============================
-	//from Reg to RM -> ADD R/M, REG
-	if (!ctx->p_sib) {
-		if (!mod_rm.RM_Mod.IsPtr) { //store to register
-			if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.SetReg<u16>(mod_rm.RM_Mod.reg,
-					GET_X_REG(mod_rm.RM_Mod.reg_val) +
-					GET_X_REG(mod_rm.Reg.val));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.SetReg<u32>(mod_rm.RM_Mod.reg,
-					GET_EXT_REG(mod_rm.RM_Mod.reg_val) +
-					GET_EXT_REG(mod_rm.Reg.val));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {
-				emu.SetReg<u64>(mod_rm.RM_Mod.reg,
-					mod_rm.RM_Mod.reg_val +
-					mod_rm.Reg.val);
-			}
-		}
-		else if (!mod_rm.RM_Mod.disp) { //store to memory, no displacement
-			if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val),
-					ToByteVector(emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val)).value() +
-						GET_X_REG(mod_rm.Reg.val)));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.memory.WriteFrom(GET_EXT_REG(mod_rm.RM_Mod.reg_val),
-					ToByteVector(emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val)).value() +
-						GET_EXT_REG(mod_rm.Reg.val)));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {
-				emu.memory.WriteFrom(mod_rm.RM_Mod.reg_val,
-					ToByteVector(emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val).value() +
-						mod_rm.Reg.val));
-			}
-		}
-		else if (mod_rm.RM_Mod.reg && mod_rm.RM_Mod.disp) { //store to memory, displacement
-			s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, 2).value();
-
-			if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp,
-					ToByteVector(emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp).value() +
-						GET_X_REG(mod_rm.Reg.val)));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.memory.WriteFrom(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp,
-					ToByteVector(emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp).value() +
-						GET_EXT_REG(mod_rm.Reg.val)));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {
-				emu.memory.WriteFrom(mod_rm.RM_Mod.reg_val + disp,
-					ToByteVector(emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val + disp).value() +
-						mod_rm.Reg.val));
-			}
-		}
-		 //store to displacement
-	}
-	//=================================SIB==============================
-	else {
-		Sib sib_byte;
-		u64 calc_offset = 0;
-
-		if (mod_rm.RM_Mod.disp) { //SIB + displacement
-			s64 disp = ReadDispFromVec<s64>(inst, mod_rm.RM_Mod.disp, 3).value();
-			if (opsize == OperandSize::X86_Osize_16bit) {
-				HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);
-				if (!sib_byte.valid)
-					return;
-				emu.memory.WriteFrom(calc_offset + disp,
-					ToByteVector(emu.memory.Read<u16>(calc_offset + disp).value() +
-						GET_X_REG(mod_rm.Reg.val)));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);
-				if (!sib_byte.valid)
-					return;
-				emu.memory.WriteFrom(calc_offset + disp,
-					ToByteVector(emu.memory.Read<u32>(calc_offset + disp).value() +
-						GET_EXT_REG(mod_rm.Reg.val)));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {
-				HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);
-				if (!sib_byte.valid)
-					return;
-				emu.memory.WriteFrom(calc_offset + disp,
-					ToByteVector(emu.memory.Read<u64>(calc_offset + disp).value() +
-						mod_rm.Reg.val));
-			}
-		}
-		else { //direct sib addressing
-			if (opsize == OperandSize::X86_Osize_16bit) {
-				HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);
-				if (!sib_byte.valid)
-					return;
-				emu.memory.WriteFrom(calc_offset,
-					ToByteVector(emu.memory.Read<u16>(calc_offset).value() +
-						GET_X_REG(mod_rm.Reg.val)));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);
-				if (!sib_byte.valid)
-					return;
-				emu.memory.WriteFrom(calc_offset,
-					ToByteVector(emu.memory.Read<u32>(calc_offset).value() +
-						GET_EXT_REG(mod_rm.Reg.val)));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) {
-				HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset);
-				if (!sib_byte.valid)
-					return;
-				emu.memory.WriteFrom(calc_offset,
-					ToByteVector(emu.memory.Read<u64>(calc_offset).value() +
-						mod_rm.Reg.val));
-			}
-		}
-	}
-	return;
+void Add_01(BUZE_STANDARD_PARAM) {
+	ModRM modrm;
+	Handle_ModRM(emu, ctx, modrm);
+	def_instruction_op2_MR<decltype(AddAndSetFlags),
+		u16, u32, u64,
+		u16, u32, u64>(emu, ctx, inst, AddAndSetFlags, modrm, modrm.RM_Mod.reg_val, modrm.Reg.val, emu.flags);
 }
-
 #pragma endregion
 #pragma region Add (0x03)
 void Add_03(BUZE_STANDARD_PARAM) {
@@ -205,9 +83,12 @@ void Or_83(BUZE_STANDARD_PARAM) {
 
 #pragma region And (0x21)
 void And_21(BUZE_STANDARD_PARAM) {
-
+	ModRM modrm;
+	Handle_ModRM(emu, ctx, modrm);
+	def_instruction_op2_MR<decltype(AndAndSetFlags),
+		u16, u32, u64,
+		u16, u32, u64>(emu, ctx, inst, AndAndSetFlags, modrm, modrm.RM_Mod.reg_val, modrm.Reg.val, emu.flags);
 }
-//INSTRUCTION_LOGICAL_OP2_RM_REG(And, 21, &)
 #pragma endregion
 #pragma region And (0x25)
 void And_25(BUZE_STANDARD_PARAM) {
@@ -236,125 +117,21 @@ void And_83(BUZE_STANDARD_PARAM) {
 
 #pragma region Sub (0x29)
 void Sub_29(BUZE_STANDARD_PARAM) {
-
+	ModRM modrm;
+	Handle_ModRM(emu, ctx, modrm);
+	def_instruction_op2_MR<decltype(SubAndSetFlags),
+		u16, u32, u64,
+		u16, u32, u64>(emu, ctx, inst, SubAndSetFlags, modrm, modrm.RM_Mod.reg_val, modrm.Reg.val, emu.flags);
 }
-/*INSTRUCTION_OP2_MR(Sub, 29,
-	SubAndSetFlags(
-		GET_X_REG(mod_rm.RM_Mod.reg_val),
-		GET_X_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		GET_EXT_REG(mod_rm.RM_Mod.reg_val),
-		GET_EXT_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		mod_rm.RM_Mod.reg_val,
-		mod_rm.Reg.val,
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val)).value(),
-		GET_X_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val)).value(),
-		GET_EXT_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val).value(),
-		mod_rm.Reg.val,
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
-		GET_X_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
-		GET_EXT_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val + disp).value(),
-		mod_rm.Reg.val,
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u16>(calc_offset + disp).value(),
-		GET_X_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u32>(calc_offset + disp).value(),
-		GET_EXT_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u64>(calc_offset + disp).value(),
-		mod_rm.Reg.val,
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u16>(calc_offset).value(),
-		GET_X_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u32>(calc_offset).value(),
-		GET_EXT_REG(mod_rm.Reg.val),
-		emu.flags),
-	SubAndSetFlags(
-		emu.memory.Read<u64>(calc_offset).value(),
-		mod_rm.Reg.val),
-		emu.flags)*/
-
 #pragma endregion
 #pragma region Sub (0x2B)
-		void Sub_2B(BUZE_STANDARD_PARAM) {
-
-		}
-/*INSTRUCTION_OP2_RM(Sub, 2B,
-	SubAndSetFlags(emu.flags,
-		GET_X_REG(mod_rm.Reg.val),
-		GET_X_REG(mod_rm.RM_Mod.reg_val)),
-	SubAndSetFlags(emu.flags,
-		GET_EXT_REG(mod_rm.Reg.val),
-		GET_EXT_REG(mod_rm.RM_Mod.reg_val)),
-	SubAndSetFlags(emu.flags,
-		mod_rm.Reg.val,
-		mod_rm.RM_Mod.reg_val),
-	
-	SubAndSetFlags(emu.flags,
-		GET_X_REG(mod_rm.Reg.val), 
-		emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val)).value()) ,
-	SubAndSetFlags(emu.flags,
-		GET_EXT_REG(mod_rm.Reg.val),
-		emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val)).value()) ,
-	SubAndSetFlags(emu.flags,
-		mod_rm.Reg.val, 
-		emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val).value()) ,
-	
-	SubAndSetFlags(emu.flags,
-		GET_X_REG(mod_rm.Reg.val),
-		emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp).value()) ,
-	SubAndSetFlags(emu.flags,
-		GET_EXT_REG(mod_rm.Reg.val),
-		emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp).value()) ,
-	SubAndSetFlags(emu.flags,
-		mod_rm.Reg.val,
-		emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val + disp).value()) ,
-	
-	SubAndSetFlags(emu.flags,
-		GET_X_REG(mod_rm.Reg.val),
-		emu.memory.Read<u16>(calc_offset + disp).value()),
-	SubAndSetFlags(emu.flags,
-		GET_EXT_REG(mod_rm.Reg.val),
-		emu.memory.Read<u32>(calc_offset + disp).value()) ,
-	SubAndSetFlags(emu.flags,
-		mod_rm.Reg.val,
-		emu.memory.Read<u64>(calc_offset + disp).value()),
-	
-	SubAndSetFlags(emu.flags,
-		GET_X_REG(mod_rm.Reg.val),
-		emu.memory.Read<u16>(calc_offset).value()),
-	SubAndSetFlags(emu.flags,
-		GET_EXT_REG(mod_rm.Reg.val),
-		emu.memory.Read<u32>(calc_offset).value()),
-	SubAndSetFlags(emu.flags,
-		mod_rm.Reg.val,
-		emu.memory.Read<u64>(calc_offset).value()))*/
+void Sub_2B(BUZE_STANDARD_PARAM) {
+	ModRM modrm;
+	Handle_ModRM(emu, ctx, modrm);
+	def_instruction_op2_RM<decltype(SubAndSetFlags),
+		u16, u32, u64,
+		u16, u32, u64>(emu, ctx, inst, SubAndSetFlags, modrm, modrm.Reg.val, modrm.RM_Mod.reg_val, emu.flags);
+}
 #pragma endregion
 #pragma region Sub (0x81)
 void Sub_81(BUZE_STANDARD_PARAM) {
@@ -377,9 +154,12 @@ void Sub_83(BUZE_STANDARD_PARAM) {
 
 #pragma region Xor (0x31)
 void Xor_31(BUZE_STANDARD_PARAM) {
-
+	ModRM modrm;
+	Handle_ModRM(emu, ctx, modrm);
+	def_instruction_op2_MR<decltype(XorAndSetFlags),
+		u16, u32, u64,
+		u16, u32, u64>(emu, ctx, inst, XorAndSetFlags, modrm, modrm.RM_Mod.reg_val, modrm.Reg.val, emu.flags);
 }
-//INSTRUCTION_LOGICAL_OP2_RM_REG(Xor, 31, ^)
 #pragma endregion
 #pragma region Xor (0x33)
 void Xor_33(BUZE_STANDARD_PARAM) {
@@ -496,7 +276,7 @@ void Mov_8B(BUZE_STANDARD_PARAM) {
 		u16, u32, u64>(emu, ctx, inst, MovAndSetFlags, modrm, modrm.Reg.val, modrm.RM_Mod.reg_val);
 }
 #pragma endregion
-#pragma region MOV (0xB8 - 0xBF)
+#pragma region Mov (0xB8 - 0xBF)
 void Mov_B8_BF(BUZE_STANDARD_PARAM) {
 	auto reg_extended = _REX_B(ctx->pfx_rex) << 3; // 1 * 8, 0 * 8
 	auto reg = static_cast<Register>((inst[INSTR_POS(0)] - 0xB8) + reg_extended);
@@ -568,56 +348,13 @@ void Test_84(BUZE_STANDARD_PARAM) {
 #pragma endregion
 #pragma region Test (0x85)
 void Test_85(BUZE_STANDARD_PARAM) {
-	
+	ModRM modrm;
+	Handle_ModRM(emu, ctx, modrm);
+	def_instruction_op2_MR<decltype(TestAndSetFlags),
+		u16, u32, u64,
+		u16, u32, u64>(emu, ctx, inst, TestAndSetFlags, modrm, modrm.RM_Mod.reg_val, modrm.Reg.val, emu.flags);
 }
-/*INSTRUCTION_OP2_MR(Test, 85,
-TestAndSetFlags(emu.flags,
-GET_X_REG(mod_rm.RM_Mod.reg_val),
-GET_X_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-GET_EXT_REG(mod_rm.RM_Mod.reg_val),
-GET_EXT_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-mod_rm.RM_Mod.reg_val,
-mod_rm.Reg.val),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val)).value(),
-GET_X_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val)).value(),
-GET_EXT_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val).value(),
-mod_rm.Reg.val),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u16>(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
-GET_X_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u32>(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp).value(),
-GET_EXT_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u64>(mod_rm.RM_Mod.reg_val + disp).value(),
-mod_rm.Reg.val),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u16>(calc_offset + disp).value(),
-GET_X_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u32>(calc_offset + disp).value(),
-GET_EXT_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u64>(calc_offset + disp).value(),
-mod_rm.Reg.val),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u16>(calc_offset).value(),
-GET_X_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u32>(calc_offset).value(),
-GET_EXT_REG(mod_rm.Reg.val)),
-TestAndSetFlags(emu.flags,
-emu.memory.Read<u64>(calc_offset).value(),
-mod_rm.Reg.val))*/
 #pragma endregion
-
 //TODO: probably add an method called "Push" in emu to assist the operation for pushing the values onto the stack
 #pragma region Push (0x50-0x57)
 void Push_50_57(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
@@ -757,6 +494,13 @@ void Call_FF_reg2(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64
 	pc = emu.Reg(Register::Rip) + call_addr;
 	std::cout << "\nSetting rip to: 0x" << std::hex << pc << "\n";
 	return;
+}
+#pragma endregion
+
+//UNIMPL
+#pragma region Dec (0xFF)
+void Dec_FF(BUZE_STANDARD_PARAM) {
+	
 }
 #pragma endregion
 

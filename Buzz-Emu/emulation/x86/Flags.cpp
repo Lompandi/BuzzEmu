@@ -1,16 +1,8 @@
 
-#include "Flags.hpp"
-
+#include <bit>
 #include <iostream>
 
-unsigned long long popcountll(unsigned long long x) {
-    unsigned long long count = 0;
-    while (x) {
-        x &= (x - 1); // Turn off the rightmost set bit
-        ++count;      // Increment count
-    }
-    return count;
-}
+#include "Flags.hpp"
 
 u64 MovAndSetFlags(u64 dst, u64 src) {
     std::cout << "Moving 0x" << std::hex << src << "\n";
@@ -37,7 +29,7 @@ u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend
     flags.SF = (result & 0x8000000000000000) ? 1 : 0;
 
     // Set the Parity Flag (PF)
-    uint64_t ones = popcountll(result);
+    uint64_t ones = std::popcount(result);
     flags.PF = (ones % 2 == 0) ? 1 : 0; // Even parity
 
     // Set the Auxiliary Carry Flag (AF)
@@ -80,7 +72,7 @@ u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, FlagsRegister64& flags
     flags.SF = (result & 0x8000000000000000) ? 1 : 0;
 
     // Set the Parity Flag (PF)
-    uint64_t ones = popcountll(result);
+    uint64_t ones = std::popcount(result);
     flags.PF = (ones % 2 == 0) ? 1 : 0; // Even parity
 
     // Set the Auxiliary Carry Flag (AF)
@@ -122,7 +114,7 @@ u64 AddAndSetFlags(u64 operand1, u64 operand2, FlagsRegister64& flags) {
     flags.SF = (result & 0x8000000000000000) ? 1 : 0;
 
     // Set the Parity Flag (PF)
-    u64 ones = popcountll(result);
+    u64 ones = std::popcount(result);
     flags.PF = (ones % 2 == 0) ? 1 : 0; // Even parity
 
     // Set the Auxiliary Carry Flag (AF)
@@ -165,7 +157,7 @@ void SetLogicOpFlags(FlagsRegister64& flags, u64 value) {
     flags.ZF = (value == 0) ? 1 : 0;
     flags.SF = (value & 0x8000000000000000) ? 1 : 0;
 
-    uint64_t ones = popcountll(value);
+    uint64_t ones = std::popcount(value);
     flags.PF = (ones % 2 == 0) ? 1 : 0;
 
     // Other flags can be set based on specific conditions.
@@ -195,7 +187,7 @@ u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, FlagsRegister64& flags) {
     flags.SF = (result & 0x8000000000000000) ? 1 : 0;
 
     // Set the Parity Flag (PF)
-    uint64_t ones = popcountll(result);
+    uint64_t ones = std::popcount(result);
     flags.PF = (ones % 2 == 0) ? 1 : 0; // Even parity
 
     flags.AF = 0;
@@ -218,4 +210,30 @@ u64 TestAndSetFlags(u64 src1, u64 src2, FlagsRegister64& flags) {
     u64 result = src1 & src2;
     SetLogicOpFlags(flags, result);
     return src1; //return original, not changine the register
+}
+
+u64 dec_and_set_flags(u64 src1, FlagsRegister64& flags){
+    // Perform the decrement
+    uint64_t result = src1 - 1;
+
+    // Set the Overflow Flag (OF)
+    bool signValue = (src1 & 0x8000000000000000) != 0;
+    bool signResult = (result & 0x8000000000000000) != 0;
+    flags.OF = (signValue && !signResult) ? 1 : 0;
+
+    // Set the Zero Flag (ZF)
+    flags.ZF = (result == 0) ? 1 : 0;
+    // Set the Sign Flag (SF)
+    flags.SF = (result & 0x8000000000000000) ? 1 : 0;
+    // Set the Parity Flag (PF)
+    uint64_t ones = std::popcount(result);
+    flags.PF = (ones % 2 == 0) ? 1 : 0; // Even parity
+
+    // Set the Auxiliary Carry Flag (AF)
+    // AF is set if there is a borrow from the lower nibble to the upper nibble
+    uint8_t lowerNibbleBefore = src1 & 0x0F;
+    uint8_t lowerNibbleAfter = result & 0x0F;
+    flags.AF = (lowerNibbleBefore < lowerNibbleAfter) ? 1 : 0;
+
+    return result;
 }

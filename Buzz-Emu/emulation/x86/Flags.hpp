@@ -61,9 +61,6 @@ struct FlagsRegister64 {
         VIP(0), ID(0), Reserved6(0) {}
 };
 
-//we need it!
-unsigned long long popcountll(unsigned long long x);
-
 u64 XorAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
 u64 AndAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
 u64 OrAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
@@ -78,5 +75,7 @@ u64 AddAndSetFlags(u64 operand1, u64 operand2, FlagsRegister64& flags);
 u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, FlagsRegister64& flags);
 
 u64 TestAndSetFlags(u64 src1, u64 src2, FlagsRegister64& flags);
+
+u64 dec_and_set_flags(u64 src1, FlagsRegister64& flags);
 
 void SetLogicOpFlags(FlagsRegister64& flags, u64 value);

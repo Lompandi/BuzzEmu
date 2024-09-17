@@ -62,6 +62,8 @@ void Pop_58_5F(BUZE_STANDARD_PARAM);
 //Call procedure
 void Call_E8(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc);
 void Call_FF_reg2(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst, u64& pc);
+//Decrement by 1
+void Dec_FF(BUZE_STANDARD_PARAM);
 //Jump to address
 void Jmp_E9(BUZE_STANDARD_PARAM, u64& pc);
 //Return from procedure
