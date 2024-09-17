@@ -140,3 +140,4 @@ PublishScripts/
 #exclude
 Buzz-Emu/*
 !Buzz-Emu/emulation/
+!Buzz-Emu/emulator/
