@@ -5,8 +5,6 @@
 #include "DecodeContext.hpp"
 #include "../../emulator/Emulator.hpp"
 
-
-
 struct Sib {
 	u8			  scale;
 	bool		  valid;
@@ -16,4 +14,4 @@ struct Sib {
 	Register      base_reg;
 };
 
-void HandleSib(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& calc_offset);
+void set_sib_byte(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& calc_offset);

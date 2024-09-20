@@ -42,15 +42,15 @@ const RmModArray rm_mod_mapping = {
 } ;
 
 
-void Clear_ModRM(ModRM* modrm) {
+void reset_modrm(ModRM* modrm) {
 	modrm->Reg.reg = Register::Rax;
 	modrm->Reg.val = 0;
-	modrm->RM_Mod.disp = 0;
-	modrm->RM_Mod.IsPtr = false;
-	modrm->RM_Mod.reg_val = 0;
-	modrm->RM_Mod.RMRegSet = false;
+	modrm->rm.disp_size = 0;
+	modrm->rm.is_addr = false;
+	modrm->rm.reg_val = 0;
+	modrm->rm.reg_set = false;
 	modrm->Reg.h_l = ByteRegister::LowByte;
-	modrm->RM_Mod.h_l = ByteRegister::LowByte;
+	modrm->rm.h_l = ByteRegister::LowByte;
 }
 
 #define DEBUG_LOG(msg, ...) \
@@ -58,9 +58,17 @@ void Clear_ModRM(ModRM* modrm) {
         std::cout << "DEBUG: " << __FUNCTION__ << ": " << msg << "\n"; \
     } while (0)
 
-void Handle_ModRM(Emulator& emu, x86Dcctx* ctx, ModRM& modrm) {
-    // Assume modrm already has a modrm byte
-    Clear_ModRM(&modrm);
+void set_modrm_byte(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, ModRegRMType hndl_type) {
+    reset_modrm(&modrm);
+
+	if (hndl_type & ModRegRMType::Reg_8bit) {
+		redef_modrm_reg8(emu, modrm);
+		DEBUG_LOG("using 8-bit register\n");
+	}
+	if (hndl_type & ModRegRMType::RM_8bit) {
+		redef_modrm_rm8(emu, modrm);
+		DEBUG_LOG("using 8-bit register/memory\n");
+	}
 
     DEBUG_LOG("Processing ModRM data");
 
@@ -83,20 +91,20 @@ void Handle_ModRM(Emulator& emu, x86Dcctx* ctx, ModRM& modrm) {
 
     // Determine if there is a SIB byte and log the result
     const auto& val = rm_mod_mapping[MODRM_RM(ctx->modrm)][MODRM_MOD(ctx->modrm)];
-    modrm.RM_Mod.IsPtr = MODRM_MOD(ctx->modrm) != 0b11;
-    DEBUG_LOG("IsPtr: " << std::boolalpha << modrm.RM_Mod.IsPtr);
+    modrm.rm.is_addr = MODRM_MOD(ctx->modrm) != 0b11;
+    DEBUG_LOG("is_addr: " << std::boolalpha << modrm.rm.is_addr);
 
     // Handle the register value if present and log
     if (val.first) {
-        modrm.RM_Mod.reg = val.first.value(); // Register
+        modrm.rm.reg = val.first.value(); // Register
         if (_REX_B(ctx->pfx_rex)) {
             /*REX.B field will extends the RM field in ModR/M*/
-            modrm.RM_Mod.reg = static_cast<Register>(std::to_underlying(modrm.RM_Mod.reg) + 8);
+            modrm.rm.reg = static_cast<Register>(std::to_underlying(modrm.rm.reg) + 8);
         }
 
-        modrm.RM_Mod.reg_val = emu.Reg(modrm.RM_Mod.reg);
-        modrm.RM_Mod.RMRegSet = true;
-        DEBUG_LOG("RM_Mod register: reg = " << static_cast<int>(modrm.RM_Mod.reg) << ", reg_val = " << std::hex << modrm.RM_Mod.reg_val);
+        modrm.rm.reg_val = emu.Reg(modrm.rm.reg);
+        modrm.rm.reg_set = true;
+        DEBUG_LOG("rm register: reg = " << static_cast<int>(modrm.rm.reg) << ", reg_val = " << std::hex << modrm.rm.reg_val);
     }
     else {
         DEBUG_LOG("No register value found in ModRM");
@@ -104,8 +112,8 @@ void Handle_ModRM(Emulator& emu, x86Dcctx* ctx, ModRM& modrm) {
 
     // Handle the displacement if present and log
     if (val.second) {
-        modrm.RM_Mod.disp = val.second; // Displacement
-        DEBUG_LOG("Displacement: " << std::hex << (int)modrm.RM_Mod.disp);
+        modrm.rm.disp_size = val.second; // Displacement
+        DEBUG_LOG("Displacement: " << std::hex << (int)modrm.rm.disp_size);
     }
     else {
         DEBUG_LOG("No displacement value found in ModRM");
@@ -147,17 +155,26 @@ constexpr ByteRegister redef_8bit_setreg_mask[8] = {
 	ByteRegister::HighByte,
 };
 
+constexpr u8 shifts_table[8] = {
+	0, 0, 0, 0,
+	8, 8, 8, 8,
+};
+
 void redef_modrm_rm8(Emulator& emu, ModRM& modrm) {
-	auto mask = redef_8bit_mask[modrm.RM_Mod.reg];
-	modrm.RM_Mod.h_l = redef_8bit_setreg_mask[modrm.RM_Mod.reg];
-	modrm.RM_Mod.reg = redef_8bit_regs[std::to_underlying(modrm.RM_Mod.reg)];
-	modrm.RM_Mod.reg_val = emu.Reg(modrm.RM_Mod.reg) & mask;
+	auto mask = redef_8bit_mask[modrm.rm.reg];
+	auto state_before = modrm.rm.reg;
+	modrm.rm.h_l = redef_8bit_setreg_mask[modrm.rm.reg];
+	modrm.rm.reg = redef_8bit_regs[std::to_underlying(modrm.rm.reg)];
+	modrm.rm.reg_val =
+		(emu.Reg(modrm.rm.reg) & mask) >> shifts_table[state_before];
 }
 
 void redef_modrm_reg8(Emulator& emu, ModRM& modrm) {
 	auto mask = redef_8bit_mask[modrm.Reg.reg];
+	auto state_before = modrm.Reg.reg;
 	modrm.Reg.h_l = redef_8bit_setreg_mask[modrm.Reg.reg];
 	/*swaps the registers into 8-bit mode*/
 	modrm.Reg.reg = redef_8bit_regs[std::to_underlying(modrm.Reg.reg)];
-	modrm.Reg.val = emu.Reg(modrm.Reg.reg) & mask;
+	modrm.Reg.val =
+		(emu.Reg(modrm.Reg.reg) & mask) >> shifts_table[state_before];
 }

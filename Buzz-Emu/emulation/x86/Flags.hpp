@@ -1,34 +1,10 @@
 #pragma once
 
+#include <vector>
+
 #include "../../core/Memtypes.hpp"
 
-struct FlagsRegister32 {
-    u32 CF : 1; // Carry Flag
-    u32 Reserved1 : 1; // Reserved
-    u32 PF : 1; // Parity Flag
-    u32 Reserved2 : 1; // Reserved
-    u32 AF : 1; // Auxiliary Carry Flag
-    u32 Reserved3 : 1; // Reserved
-    u32 ZF : 1; // Zero Flag
-    u32 SF : 1; // Sign Flag
-    u32 Reserved4 : 1; // Reserved
-    u32 TF : 1; // Trap Flag
-    u32 IF : 1; // Interrupt Enable Flag
-    u32 DF : 1; // Direction Flag
-    u32 OF : 1; // Overflow Flag
-    u32 IOPL : 2; // I/O Privilege Level
-    u32 NT : 1; // Nested Task
-    u32 Reserved5 : 1; // Reserved
-    u32 RF : 1; // Resume Flag
-    u32 VM : 1; // Virtual 8086 Mode
-    u32 AC : 1; // Alignment Check
-    u32 VIF : 1; // Virtual Interrupt Flag
-    u32 VIP : 1; // Virtual Interrupt Pending
-    u32 ID : 1; // Identification Flag
-    u32 Reserved6 : 10; // Reserved
-};
-
-struct FlagsRegister64 {
+struct RflagsRegister {
     u64 CF : 1; // Carry Flag
     u64 Reserved1 : 1; // Reserved
     u64 PF : 1; // Parity Flag
@@ -53,7 +29,7 @@ struct FlagsRegister64 {
     u64 ID : 1; // Identification Flag
     u64 Reserved6 : 43; // Reserved (for 64-bit mode)
 
-    FlagsRegister64()
+    RflagsRegister()
         : CF(0), Reserved1(0), PF(0), Reserved2(0),
         AF(0), Reserved3(0), ZF(0), SF(0), Reserved4(0),
         TF(0), IF(0), DF(0), OF(0), IOPL(0), NT(0),
@@ -61,21 +37,23 @@ struct FlagsRegister64 {
         VIP(0), ID(0), Reserved6(0) {}
 };
 
-u64 XorAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
-u64 AndAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
-u64 OrAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags);
+u64 XorAndSetFlags(u64 dst, u64 src, RflagsRegister& flags);
+u64 AndAndSetFlags(u64 dst, u64 src, RflagsRegister& flags);
+u64 OrAndSetFlags(u64 dst, u64 src, RflagsRegister& flags);
 
 //will be segment register
-u64 MovAndSetFlags(u64 dst, u64 src);
-//u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend);
-u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, FlagsRegister64& flags);
+u64 mov_operation(u64 dst, u64 src);
+//u64 SubAndSetFlags(RflagsRegister& flags, uint64_t minuend, uint64_t subtrahend);
+u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, RflagsRegister& flags);
 
-u64 AddAndSetFlags(u64 operand1, u64 operand2, FlagsRegister64& flags);
+u64 AddAndSetFlags(u64 operand1, u64 operand2, RflagsRegister& flags);
 
-u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, FlagsRegister64& flags);
+u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, RflagsRegister& flags);
 
-u64 TestAndSetFlags(u64 src1, u64 src2, FlagsRegister64& flags);
+u64 TestAndSetFlags(u64 src1, u64 src2, RflagsRegister& flags);
 
-u64 dec_and_set_flags(u64 src1, FlagsRegister64& flags);
+u64 dec_and_set_flags(u64 src1, RflagsRegister& flags);
 
-void SetLogicOpFlags(FlagsRegister64& flags, u64 value);
+void SetLogicOpFlags(RflagsRegister& flags, u64 value);
+
+u64 Lea(u64 dst, u64 src, size_t inst_size, u64& pc, s64 disp);

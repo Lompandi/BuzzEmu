@@ -143,7 +143,6 @@
   <ItemGroup>
     <ClInclude Include="core\Fs.hpp" />
     <ClInclude Include="core\Memtypes.hpp" />
-    <ClInclude Include="emulation\x86\AddressingMode.hpp" />
     <ClInclude Include="emulation\x86\Flags.hpp" />
     <ClInclude Include="emulation\x86\InstructionHandler.hpp" />
     <ClInclude Include="emulation\x86\DecodeContext.hpp" />
@@ -156,6 +155,7 @@
     <ClInclude Include="emulation\x86\SizeEnum.hpp" />
     <ClInclude Include="emulator\Emulator.hpp" />
     <ClInclude Include="emulator\VmExit.hpp" />
+    <ClInclude Include="include\callcontext.hpp" />
     <ClInclude Include="memory\Block.hpp" />
     <ClInclude Include="memory\Mmu.hpp" />
     <ClInclude Include="memory\Permission.hpp" />

@@ -4,12 +4,12 @@
 
 #include "Flags.hpp"
 
-u64 MovAndSetFlags(u64 dst, u64 src) {
+u64 mov_operation(u64 dst, u64 src) {
     std::cout << "Moving 0x" << std::hex << src << "\n";
     return src;
 }
 
-u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend) {
+u64 SubAndSetFlags(RflagsRegister& flags, uint64_t minuend, uint64_t subtrahend) {
     // Perform the subtraction
     uint64_t result = minuend - subtrahend;
 
@@ -52,7 +52,7 @@ u64 SubAndSetFlags(FlagsRegister64& flags, uint64_t minuend, uint64_t subtrahend
 }
 
 //overload func 2:
-u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, FlagsRegister64& flags) {
+u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, RflagsRegister& flags) {
     // Perform the subtraction
     uint64_t result = minuend - subtrahend;
 
@@ -95,7 +95,7 @@ u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, FlagsRegister64& flags
 }
 
 /*return = operand1 + operand2*/
-u64 AddAndSetFlags(u64 operand1, u64 operand2, FlagsRegister64& flags) {
+u64 AddAndSetFlags(u64 operand1, u64 operand2, RflagsRegister& flags) {
     u64 result = operand1 + operand2;
 
     // Set the Carry Flag (CF)
@@ -135,25 +135,25 @@ u64 AddAndSetFlags(u64 operand1, u64 operand2, FlagsRegister64& flags) {
     return result;
 }
 
-u64 XorAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags) {
+u64 XorAndSetFlags(u64 dst, u64 src, RflagsRegister& flags) {
     auto result = dst ^ src;
     SetLogicOpFlags(flags, result);
     return result;
 }
 
-u64 AndAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags) {
+u64 AndAndSetFlags(u64 dst, u64 src, RflagsRegister& flags) {
     auto result = dst & src;
     SetLogicOpFlags(flags, result);
     return result;
 }
 
-u64 OrAndSetFlags(u64 dst, u64 src, FlagsRegister64& flags) {
+u64 OrAndSetFlags(u64 dst, u64 src, RflagsRegister& flags) {
     auto result = dst | src;
     SetLogicOpFlags(flags, result);
     return result;
 }
 
-void SetLogicOpFlags(FlagsRegister64& flags, u64 value) {
+void SetLogicOpFlags(RflagsRegister& flags, u64 value) {
     flags.ZF = (value == 0) ? 1 : 0;
     flags.SF = (value & 0x8000000000000000) ? 1 : 0;
 
@@ -167,7 +167,7 @@ void SetLogicOpFlags(FlagsRegister64& flags, u64 value) {
 }
 
 //Cmp one, two
-u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, FlagsRegister64& flags) {
+u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, RflagsRegister& flags) {
     // Perform the subtraction
     uint64_t result = src1 - src2;
 
@@ -206,13 +206,13 @@ u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, FlagsRegister64& flags) {
     return src1;//return original, not setting the register
 }
 
-u64 TestAndSetFlags(u64 src1, u64 src2, FlagsRegister64& flags) {
+u64 TestAndSetFlags(u64 src1, u64 src2, RflagsRegister& flags) {
     u64 result = src1 & src2;
     SetLogicOpFlags(flags, result);
     return src1; //return original, not changine the register
 }
 
-u64 dec_and_set_flags(u64 src1, FlagsRegister64& flags){
+u64 dec_and_set_flags(u64 src1, RflagsRegister& flags){
     // Perform the decrement
     uint64_t result = src1 - 1;
 
@@ -236,4 +236,10 @@ u64 dec_and_set_flags(u64 src1, FlagsRegister64& flags){
     flags.AF = (lowerNibbleBefore < lowerNibbleAfter) ? 1 : 0;
 
     return result;
+}
+
+u64 Lea(u64 dst, u64 src, size_t inst_size, u64& pc, s64 disp) {
+    auto effective_addr = pc + inst_size + disp;
+    std::cout << "[LEA] loading address: 0x" << std::hex << effective_addr << "\n";
+    return effective_addr;
 }

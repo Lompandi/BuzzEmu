@@ -21,7 +21,7 @@ public:
 	std::array<u64, 17> registers;
 
 	//All x86 64 Cpu flags
-	FlagsRegister64 flags;
+	RflagsRegister flags;
 
 	/*
 	Create a new emulator with `size` bytes of memory

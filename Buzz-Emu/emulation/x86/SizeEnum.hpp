@@ -17,6 +17,7 @@ enum OperandSize {
 	X86_Osize_16bit = 0,
 	X86_Osize_32bit,
 	X86_Osize_64bit,
+	X86_Osize_8bit,	//MANUAL modified code
 };
 
 enum AddressingSize : u8 {

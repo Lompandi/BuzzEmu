@@ -55,25 +55,25 @@ void Emulator::SetReg64(Register reg, u64 val) {
 
 void DEBUG_FUNC CrashDump(Emulator& emu) {
 	//dump general pourpose registers
-	std::cout << "RAX: 0x" << std::hex << emu.Reg(Register::Rax);
-	std::cout << " RCX: 0x" << std::hex << emu.Reg(Register::Rcx) << "\n";
-	std::cout << "RDX: 0x" << std::hex << emu.Reg(Register::Rdx);
-	std::cout << " RBX: 0x" << std::hex << emu.Reg(Register::Rbx) << "\n";
-	std::cout << "RSP: 0x" << std::hex << emu.Reg(Register::Rsp);
-	std::cout << " RBP: 0x" << std::hex << emu.Reg(Register::Rbp) << "\n";
-	std::cout << "RSI: 0x" << std::hex << emu.Reg(Register::Rsi);
-	std::cout << " RDI: 0x" << std::hex << emu.Reg(Register::Rdi) << "\n\n";
+	std::cout << "rax: 0x" << std::hex << emu.Reg(Register::Rax);
+	std::cout << " rcx: 0x" << std::hex << emu.Reg(Register::Rcx) << "\n";
+	std::cout << "rdx: 0x" << std::hex << emu.Reg(Register::Rdx);
+	std::cout << " rbx: 0x" << std::hex << emu.Reg(Register::Rbx) << "\n";
+	std::cout << "rsp: 0x" << std::hex << emu.Reg(Register::Rsp);
+	std::cout << " rbp: 0x" << std::hex << emu.Reg(Register::Rbp) << "\n";
+	std::cout << "rsi: 0x" << std::hex << emu.Reg(Register::Rsi);
+	std::cout << " rdi: 0x" << std::hex << emu.Reg(Register::Rdi) << "\n\n";
 
 	//dump Cpu flags
-	std::cout << "CF: " << std::hex <<emu.flags.CF; // Carry Flag
-	std::cout << " PF: " << std::hex <<emu.flags.PF; // Parity Flag
-	std::cout << " AF: " << std::hex <<emu.flags.AF; // Auxiliary Carry Flag
-	std::cout << " ZF: " << std::hex <<emu.flags.ZF << "\n"; // Zero Flag
-	std::cout << "SF: " << std::hex <<emu.flags.SF; // Sign Flag
-	std::cout << " TF: " << std::hex <<emu.flags.TF; // Trap Flag
-	std::cout << " IF: " << std::hex <<emu.flags.IF; // Interrupt Enable Flag
-	std::cout << " DF: " << std::hex <<emu.flags.DF << "\n"; // Direction Flag
-	std::cout << "OF: " << std::hex <<emu.flags.OF << "\n\n"; // Overflow Flag
+	std::cout << "cf: " << std::hex <<emu.flags.CF; // Carry Flag
+	std::cout << " pf: " << std::hex <<emu.flags.PF; // Parity Flag
+	std::cout << " af: " << std::hex <<emu.flags.AF; // Auxiliary Carry Flag
+	std::cout << " zf: " << std::hex <<emu.flags.ZF << "\n"; // Zero Flag
+	std::cout << "sf: " << std::hex <<emu.flags.SF; // Sign Flag
+	std::cout << " tf: " << std::hex <<emu.flags.TF; // Trap Flag
+	std::cout << " if: " << std::hex <<emu.flags.IF; // Interrupt Enable Flag
+	std::cout << " df: " << std::hex <<emu.flags.DF << "\n"; // Direction Flag
+	std::cout << "of: " << std::hex <<emu.flags.OF << "\n\n"; // Overflow Flag
 }
 
 void opcode_cpy(uint8_t* opcode, const uint8_t* src, size_t size) {
@@ -97,7 +97,7 @@ VmExit Emulator::Run() {
 		memory.ReadInstruction(lendec, pc, inst, (PERM_READ | PERM_EXEC));
 		std::cout << "opcode size: " << lendec.GetDecoderCtx().opcode_size << "\n";
 		
-		u32 opcode;
+		u32 opcode = 0;
 		u8 modrm;
 		if (lendec.GetDecoderCtx().pfx_p_rex)
 			std::cout << " prefixed REX";
@@ -135,8 +135,8 @@ VmExit Emulator::Run() {
 			break;
 /*======================= Logical Or(0x0C) ===================================*/
 		case Instruction::OR_0C:
-			SetReg<u8>(Register::Rax, GET_L_REG(Reg(Register::Rax)) | ReadFromVec<u8>(inst, 1));
-			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) | ReadFromVec<u8>(inst, 1));
+			SetReg<u8>(Register::Rax, GET_L_REG(Reg(Register::Rax)) | read_from_vec<u8>(inst, 1));
+			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) | read_from_vec<u8>(inst, 1));
 			break;
 /*======================= Logical Or(0x0D) ===================================*/
 		case Instruction::OR_0D:
@@ -149,8 +149,8 @@ VmExit Emulator::Run() {
 			break;
 /*======================= Logical And(0x24) ==================================*/
 		case Instruction::AND_24:
-			SetReg<u8>(Register::Rax, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
-			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
+			SetReg<u8>(Register::Rax, GET_L_REG(Reg(Register::Rax)) & read_from_vec<u8>(inst, 1));
+			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) & read_from_vec<u8>(inst, 1));
 			break;
 /*======================= Logical And(0x25) ==================================*/
 		case Instruction::AND_25:
@@ -169,16 +169,16 @@ VmExit Emulator::Run() {
 			break;
 /*======================= Subtract(0x2C) =====================================*/
 		case Instruction::SUB_2C:
-			SetReg<u8>(Register::Rax, SubAndSetFlags(GET_L_REG(Reg(Register::Rax)), ReadFromVec<u8>(inst, 1), flags));
+			SetReg<u8>(Register::Rax, SubAndSetFlags(GET_L_REG(Reg(Register::Rax)), read_from_vec<u8>(inst, 1), flags));
 			break;
 /*======================= Subtract(0x2D) =====================================*/
 		case Instruction::SUB_2D:
 			if (lendec.GetDecoderCtx().osize == X86_Osize_16bit && inst.size() == 3)
-				SetReg<u16>(Register::Rax, SubAndSetFlags(GET_X_REG(Reg(Register::Rax)), ReadFromVec<u16>(inst, 1), flags));
+				SetReg<u16>(Register::Rax, SubAndSetFlags(GET_X_REG(Reg(Register::Rax)), read_from_vec<u16>(inst, 1), flags));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_32bit && inst.size() == 5)
-				SetReg<u32>(Register::Rax, SubAndSetFlags(GET_EXT_REG(Reg(Register::Rax)), ReadFromVec<u32>(inst, 1), flags));
+				SetReg<u32>(Register::Rax, SubAndSetFlags(GET_EXT_REG(Reg(Register::Rax)), read_from_vec<u32>(inst, 1), flags));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 5)
-				SetReg<u64>(Register::Rax, SubAndSetFlags(Reg(Register::Rax), static_cast<u64>(ReadFromVec<u32>(inst, 1)), flags));
+				SetReg<u64>(Register::Rax, SubAndSetFlags(Reg(Register::Rax), static_cast<u64>(read_from_vec<u32>(inst, 1)), flags));
 			break;
 /*======================= Exclusive or operation(0x31) =======================*/
 		case Instruction::XOR_31:
@@ -192,8 +192,8 @@ VmExit Emulator::Run() {
 			break;
 /*======================= Exclusive or operation(0x34) =======================*/
 		case Instruction::XOR_34:
-			SetReg<u8>(Register::Rax, GET_L_REG(Reg(Register::Rax)) ^ ReadFromVec<u8>(inst, 1));
-			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) ^ ReadFromVec<u8>(inst, 1));
+			SetReg<u8>(Register::Rax, GET_L_REG(Reg(Register::Rax)) ^ read_from_vec<u8>(inst, 1));
+			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) ^ read_from_vec<u8>(inst, 1));
 			break;
 /*======================= Exclusive or operation(0x35) =======================*/
 		case Instruction::XOR_35: 
@@ -259,21 +259,21 @@ VmExit Emulator::Run() {
 /*======================= Jump if zero (0x74) ================================*/
 		case Instruction::JZ_74:
 			//Signed-extended offset
-			pc = Reg(Register::Rip) + (this->flags.ZF ? ReadFromVec<s8>(inst, 1) : 0);
+			pc = Reg(Register::Rip) + (this->flags.ZF ? read_from_vec<s8>(inst, 1) : 0);
 			break;
 		case Instruction::JNZ_75:
-			pc = Reg(Register::Rip) + (this->flags.ZF ? 0 : ReadFromVec<s8>(inst, 1));
+			pc = Reg(Register::Rip) + (this->flags.ZF ? 0 : read_from_vec<s8>(inst, 1));
 			break;
 /*======================= Jump if less (0x7C) ================================*/
 		case Instruction::JL_7C:
 			//Signed-extended offset
-			pc = Reg(Register::Rip) + (this->flags.SF != this->flags.OF ? ReadFromVec<s8>(inst, 1) : 0);
-			std::cout << "JL Rel8: 0x" << std::hex << (int)ReadFromVec<s8>(inst, 1) << "\n";
+			pc = Reg(Register::Rip) + (this->flags.SF != this->flags.OF ? read_from_vec<s8>(inst, 1) : 0);
+			std::cout << "JL Rel8: 0x" << std::hex << (int)read_from_vec<s8>(inst, 1) << "\n";
 			std::cout << "Pc after JL: 0x" << std::hex << pc << "\n";
 			break;
 		case Instruction::JLE_7E:
 			pc = Reg(Register::Rip) + 
-				(this->flags.ZF == 1 || this->flags.SF != this->flags.OF ? ReadFromVec<s8>(inst, 1) : 0);
+				(this->flags.ZF == 1 || this->flags.SF != this->flags.OF ? read_from_vec<s8>(inst, 1) : 0);
 			break;
 		case Instruction::_81:
 			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
@@ -344,16 +344,16 @@ VmExit Emulator::Run() {
 			break;
 /*======================= Test(0xA8) ===========================================*/
 		case Instruction::TEST_A8:
-			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) & ReadFromVec<u8>(inst, 1));
+			SetLogicOpFlags(flags, GET_L_REG(Reg(Register::Rax)) & read_from_vec<u8>(inst, 1));
 			break;
 /*======================= Test(0xA9) ===========================================*/
 		case Instruction::TEST_A9:
 			if (lendec.GetDecoderCtx().osize == X86_Osize_16bit && inst.size() == 3)
-				SetLogicOpFlags(flags, GET_X_REG(Reg(Register::Rax)) & ReadFromVec<u16>(inst, 1));
+				SetLogicOpFlags(flags, GET_X_REG(Reg(Register::Rax)) & read_from_vec<u16>(inst, 1));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_32bit && inst.size() == 5)
-				SetLogicOpFlags(flags, GET_EXT_REG(Reg(Register::Rax)) & ReadFromVec<u32>(inst, 1));
+				SetLogicOpFlags(flags, GET_EXT_REG(Reg(Register::Rax)) & read_from_vec<u32>(inst, 1));
 			else if (lendec.GetDecoderCtx().osize == X86_Osize_64bit && inst.size() == 5)
-				SetLogicOpFlags(flags, Reg(Register::Rax) & static_cast<u64>(ReadFromVec<u32>(inst, 1)));
+				SetLogicOpFlags(flags, Reg(Register::Rax) & static_cast<u64>(read_from_vec<u32>(inst, 1)));
 			break;
 		case Instruction::MOV_B8:
 			Mov_B8_BF(instruction_param);
@@ -381,8 +381,10 @@ VmExit Emulator::Run() {
 			break;
 		case Instruction::RET_C3:
 			std::cout << "Returning from procedure...\n";
-
 			Ret_C3(*this, &lendec.GetDecoderCtx(), inst, pc);
+			break;
+		case Instruction::MOV_C7:
+			Mov_C7(*this, &lendec.GetDecoderCtx(), inst);
 			break;
 /*============================ Call procedure (0xE8) ===========================*/
 		case Instruction::CALL_E8:
@@ -394,13 +396,13 @@ VmExit Emulator::Run() {
 			Jmp_E9(*this, &lendec.GetDecoderCtx(), inst, pc);
 			break;
 		case Instruction::JMP_EB:
-			pc = Reg(Register::Rip) + static_cast<s64>(ReadFromVec<s8>(inst, 1));
+			pc = Reg(Register::Rip) + static_cast<s64>(read_from_vec<s8>(inst, 1));
 			break;
 		case Instruction::_FF:
 			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
 			{
 			case 0x01:
-				//TODO
+				Dec_FF(instruction_param);
 				break;
 			case 0x02:
 				Call_FF_reg2(*this, &lendec.GetDecoderCtx(), inst, pc);
@@ -453,7 +455,7 @@ void Emulator::TestRun() {
 		// Copy the opcode from the instruction vector
 		opcode_cpy((u8*)&opcode, inst.data() + pos_opcode, opcode_size);
 
-		//std::cout << "0x" <<std::hex << pc << " with opcode 0x" << std::hex << opcode << "\n";
+		std::cout << "0x" <<std::hex << pc << " with opcode 0x" << std::hex << opcode << "\n";
 
 		//Start to emulate instructions
 		switch (opcode) {
@@ -556,6 +558,27 @@ void Emulator::TestRun() {
 		case Instruction::_81:
 			break;
 		case Instruction::_83:
+			switch (MODRM_REG(lendec.GetDecoderCtx().modrm)) {
+			case 0b000:
+				CrashDump(*this);
+				std::cout << "calulating add...\n";
+				Add_83(instruction_param);
+				CrashDump(*this);
+				break;
+			case 0x01:
+				break;
+			case 0x04:
+				break;
+			case 0x05:
+				break;
+			case 0x06:
+				break;
+			case 0x07:
+				break;
+			default:
+				std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+				break;
+			}
 			break;
 		case 0x84:
 			break;
@@ -569,6 +592,9 @@ void Emulator::TestRun() {
 			break;
 			/*======================= Move instruction(0x8B) ===============================*/
 		case Instruction::MOV_8B:
+			break;
+		case Instruction::LEA_8D:
+			//Lea_8D(*this, &lendec.GetDecoderCtx(), inst, pc);
 			break;
 			/*======================= No operation instruction =======================*/
 		case Instruction::NOP:
@@ -600,6 +626,9 @@ void Emulator::TestRun() {
 			break;
 		case Instruction::RET_C3:
 			break;
+		case Instruction::MOV_C7:
+			Mov_C7(instruction_param);
+			break;
 		case 0xCC:
 			break;
 			/*============================ Call procedure (0xE8) ===========================*/
@@ -611,6 +640,16 @@ void Emulator::TestRun() {
 		case Instruction::JMP_EB:
 			break;
 		case Instruction::_FF:
+			switch (MODRM_REG(lendec.GetDecoderCtx().modrm))
+			{
+			case 0b001:
+				break;
+			case 0b010:
+				break;
+			default:
+				std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+				break;
+			}
 			break;
 		case Instruction::MOVZX_0FB6:
 			break;

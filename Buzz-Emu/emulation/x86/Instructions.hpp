@@ -53,6 +53,7 @@ enum Instruction : u32 {
 	MOV_88 = 0x88,
 	MOV_89 = 0x89,
 	MOV_8B = 0x8B,
+	LEA_8D = 0x8D,
 	NOP = 0x90,
 	TEST_A8 = 0xA8,
 	TEST_A9 = 0xA9,
@@ -65,6 +66,7 @@ enum Instruction : u32 {
 	MOV_BE = 0xBE,
 	MOV_BF = 0xBF,
 	RET_C3 = 0xC3,
+	MOV_C7 = 0xC7,
 	CALL_E8 = 0xE8,
 	JMP_E9 = 0xE9,
 	JMP_EB = 0xEB,
@@ -72,112 +74,3 @@ enum Instruction : u32 {
 	SYSCALL_0F05 = 0x0F05,
 	MOVZX_0FB6 = 0x0FB6,
 };
-
-#define INSTRUCTION_LOGICAL_OP2_RM_REG(name, opcode, op_operator) \
-void name##_##opcode(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) { \
-    OperandSize opsize = ctx->osize; \
- \
-    ModRM mod_rm; \
-    Handle_ModRM(emu, ctx, mod_rm); \
- \
-    if (!mod_rm.RM_Mod.disp && !mod_rm.RM_Mod.RMRegSet) \
-        return; \
-    uint64_t result; \
- \
-    if (!ctx->p_sib) { \
-        if (!mod_rm.RM_Mod.IsPtr) { \
-            if (opsize == OperandSize::X86_Osize_16bit) { \
-                result = GET_X_REG(mod_rm.RM_Mod.reg_val) ##op_operator GET_X_REG(mod_rm.Reg.val); \
-                emu.SetReg<OPtype64>(mod_rm.RM_Mod.reg, result); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_32bit) { \
-                result = GET_EXT_REG(mod_rm.RM_Mod.reg_val) ##op_operator GET_EXT_REG(mod_rm.Reg.val); \
-                emu.SetReg<OPtype64>(mod_rm.RM_Mod.reg, result); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) { \
-                result = mod_rm.RM_Mod.reg_val ##op_operator mod_rm.Reg.val; \
-                emu.SetReg<OPtype64>(mod_rm.RM_Mod.reg, result); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-        } \
-        else if (!mod_rm.RM_Mod.disp) { \
-            if (opsize == OperandSize::X86_Osize_16bit) { \
-                result = emu.memory.Read<uint16_t>(GET_X_REG(mod_rm.RM_Mod.reg_val)).value() ##op_operator GET_X_REG(mod_rm.Reg.val); \
-                emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val), ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_32bit) { \
-                result = emu.memory.Read<uint32_t>(GET_EXT_REG(mod_rm.RM_Mod.reg_val)).value() ##op_operator GET_EXT_REG(mod_rm.Reg.val); \
-                emu.memory.WriteFrom(GET_EXT_REG(mod_rm.RM_Mod.reg_val), ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) { \
-                result = emu.memory.Read<uint64_t>(mod_rm.RM_Mod.reg_val).value() ##op_operator mod_rm.Reg.val; \
-                emu.memory.WriteFrom(mod_rm.RM_Mod.reg_val, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-        } \
-        else if (mod_rm.RM_Mod.reg && mod_rm.RM_Mod.disp) { \
-            int64_t disp = ReadDispFromVec<int64_t>(inst, mod_rm.RM_Mod.disp, 2).value(); \
- \
-            if (opsize == OperandSize::X86_Osize_16bit) { \
-                result = emu.memory.Read<uint16_t>(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp).value() ##op_operator GET_X_REG(mod_rm.Reg.val); \
-                emu.memory.WriteFrom(GET_X_REG(mod_rm.RM_Mod.reg_val) + disp, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_32bit) { \
-                result = emu.memory.Read<uint32_t>(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp).value() ##op_operator GET_EXT_REG(mod_rm.Reg.val); \
-                emu.memory.WriteFrom(GET_EXT_REG(mod_rm.RM_Mod.reg_val) + disp, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) { \
-                result = emu.memory.Read<uint64_t>(mod_rm.RM_Mod.reg_val + disp).value() ##op_operator mod_rm.Reg.val; \
-                emu.memory.WriteFrom(mod_rm.RM_Mod.reg_val + disp, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-        } \
-    } \
-    else { \
-        Sib sib_byte; \
-        uint64_t calc_offset = 0; \
-		HandleSib(emu, ctx, mod_rm, sib_byte, calc_offset); if(!sib_byte.valid) return;\
-        if (mod_rm.RM_Mod.disp) { \
-            int64_t disp = ReadDispFromVec<int64_t>(inst, mod_rm.RM_Mod.disp, 3).value(); \
-            if (opsize == OperandSize::X86_Osize_16bit) { \
-                result = emu.memory.Read<uint16_t>(calc_offset + disp).value() ##op_operator GET_X_REG(mod_rm.Reg.val); \
-                emu.memory.WriteFrom(calc_offset + disp, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_32bit) { \
-                result = emu.memory.Read<uint32_t>(calc_offset + disp).value() ##op_operator GET_EXT_REG(mod_rm.Reg.val); \
-                emu.memory.WriteFrom(calc_offset + disp, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) { \
-                result = emu.memory.Read<uint64_t>(calc_offset + disp).value() ##op_operator mod_rm.Reg.val; \
-                emu.memory.WriteFrom(calc_offset + disp, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-        } \
-        else { \
-            if (opsize == OperandSize::X86_Osize_16bit) { \
-                result = emu.memory.Read<uint16_t>(calc_offset).value() ##op_operator GET_X_REG(mod_rm.Reg.val); \
-                emu.memory.WriteFrom(calc_offset, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_32bit) { \
-                result = emu.memory.Read<uint32_t>(calc_offset).value() ##op_operator GET_EXT_REG(mod_rm.Reg.val); \
-                emu.memory.WriteFrom(calc_offset, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-            else if (opsize == OperandSize::X86_Osize_64bit && _REX_W(ctx->pfx_rex)) { \
-                result = emu.memory.Read<uint64_t>(calc_offset).value() ##op_operator mod_rm.Reg.val; \
-                emu.memory.WriteFrom(calc_offset, ToByteVector(result)); \
-                SetLogicOpFlags(emu.flags, result); \
-            } \
-        } \
-    } \
-    return; \
-}

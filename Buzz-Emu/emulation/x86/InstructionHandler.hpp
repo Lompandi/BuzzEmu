@@ -48,6 +48,9 @@ void Mov_88(BUZE_STANDARD_PARAM);
 void Mov_89(BUZE_STANDARD_PARAM);
 void Mov_8B(BUZE_STANDARD_PARAM);
 void Mov_B8_BF(BUZE_STANDARD_PARAM);
+void Mov_C7(BUZE_STANDARD_PARAM);
+//Load effective address
+void Lea_8D(BUZE_STANDARD_PARAM, u64& pc);
 //Move signed extended
 void Movsxd_63(BUZE_STANDARD_PARAM);
 //Move zero-extended

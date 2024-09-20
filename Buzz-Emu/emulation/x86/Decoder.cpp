@@ -36,8 +36,7 @@ void Ldasm::GetOsize(u16 flags) {
         x86_dctx.osize = (p ? X86_Osize_32bit : X86_Osize_16bit);
     else if (x86_dctx.dmode == X86_Dmode_32bit)
         x86_dctx.osize = (p ? X86_Osize_16bit : X86_Osize_32bit);
-
-    else // x86_dctx.dmode == X86_Dmode_64bit
+    else if(x86_dctx.dmode == X86_Dmode_64bit)
     {
         if (flags & x86_Flag_F64)
             x86_dctx.osize = X86_Osize_64bit;
@@ -58,6 +57,11 @@ void Ldasm::GetOsize(u16 flags) {
                     x86_dctx.osize = (p ? X86_Osize_16bit : X86_Osize_32bit);
             }
         }
+    }
+    else{ 
+        //8-bit mode, MANUAL modified code
+        if (!x86_dctx.pfx_p_osize && x86_dctx.p_modrm)
+            x86_dctx.osize = X86_Osize_8bit;
     }
 }
 
@@ -733,6 +737,7 @@ void Ldasm::DecodeClear() {
     x86_dctx.table_index = ~0;
     x86_dctx.disp_size = 0;
 }
+
 
 u8 Ldasm::DecodeInstructionLength(DasmMode dmode, const std::vector<u8>& memory, VirtualAddr pc) {
     DecodeClear();

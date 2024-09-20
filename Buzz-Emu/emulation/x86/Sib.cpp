@@ -8,7 +8,7 @@ constexpr std::array<uint8_t, 4> scale_table = { 1, 2, 4, 8 };
 
 #include <iostream> // For std::cout
 
-void HandleSib(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& clac_offset) {
+void set_sib_byte(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& clac_offset) {
     auto sib_byte = ctx->sib;
 
     std::cout << "SIB Byte: " << std::hex << static_cast<int>(sib_byte) << std::dec << std::endl;
@@ -35,10 +35,10 @@ void HandleSib(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& clac_o
 
     if (SIB_BASE(sib_byte) == 0b101) {
         // Special case: BASE = 101 means no base register, use displacement
-        if (modrm.RM_Mod.disp == 0) {
+        if (modrm.rm.disp_size == 0) {
             // If no displacement is present, use a 32-bit displacement
             clac_offset = sib.scale * emu.Reg(sib.index_reg);
-            modrm.RM_Mod.disp = 32;
+            modrm.rm.disp_size = 32;
             std::cout << "Offset calculation (base = 101, no displacement): " << clac_offset << std::endl;
             std::cout << "Using 32-bit displacement" << std::endl;
             sib.valid = true;
@@ -62,7 +62,7 @@ void HandleSib(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& clac_o
         // Calculate offset with base register
         clac_offset = (sib.scale * (sib.use_indx ? emu.Reg(sib.index_reg) : 0)) + (sib.use_base ? emu.Reg(sib.base_reg) : 0);
         std::cout << "Offset calculation: " << clac_offset << std::endl;
-        std::cout << "sib stynax: [r" << (int)sib.base_reg << " + disp" <<  (int)modrm.RM_Mod.disp << "]\n";
+        std::cout << "sib stynax: [r" << (int)sib.base_reg << " + disp" <<  (int)modrm.rm.disp_size << "]\n";
     }
 
     // Final log for SIB validity

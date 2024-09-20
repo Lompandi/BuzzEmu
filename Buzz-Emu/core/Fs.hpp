@@ -12,15 +12,21 @@ std::vector<u8> read_file(const std::string& filename);
 std::vector<uint8_t> get_range(const std::vector<uint8_t>& vec, std::size_t offset, std::size_t length);
 
 template<typename T>
-T ReadFromVec(const std::vector<u8>& vec, size_t offset) {
+T read_from_vec(const std::vector<u8>& vec, size_t offset) {
     static_assert(std::is_trivially_copyable<T>::value, "Type T must be trivially copyable");
     return *reinterpret_cast<const T*>(vec.data() + offset);
 }
 
 template <typename FuncType, typename... ExtraArgs>
-auto CallInstrEmuFunc(FuncType func, u64 value1, u64 value2, ExtraArgs... extraArgs)
+auto call_function(FuncType func, u64 value1, u64 value2, ExtraArgs... extraArgs)
 -> decltype(func(value1, value2, extraArgs...)) {
     return func(value1, value2, extraArgs...);
+}
+
+template <typename FuncType, typename... ExtraArgs>
+auto call_function(FuncType func, u64 value1, ExtraArgs... extraArgs)
+-> decltype(func(value1, extraArgs...)) {
+    return func(value1, extraArgs...);
 }
 
 template<typename T>
@@ -35,7 +41,7 @@ T ReadFromVecTurnc(const std::vector<uint8_t>& vec, size_t offset) {
 }
 
 template <typename T>
-std::vector<uint8_t> ToByteVector(T value) {
+std::vector<uint8_t> to_byte_vec(T value) {
     static_assert(std::is_integral_v<T>, "T must be an integral type");
 
     std::vector<uint8_t> bytes(sizeof(T));
@@ -50,10 +56,10 @@ std::vector<uint8_t> ToByteVector(T value) {
 std::optional<u64> ReadU64FromVec(const std::vector<uint8_t>& vec, size_t size, size_t offset);
 
 template <typename T>
-std::optional<T> ReadDispFromVec(const std::vector<uint8_t>& vec, size_t size_bit, size_t offset) {
+std::optional<T> read_disp_from_inst(const std::vector<uint8_t>& vec, size_t size_bit, size_t offset) {
     size_t size = size_bit >> 3; // Convert bits to bytes
 
-    std::cout << "ReadDispFromVec(): size " << size << "\n";
+    std::cout << "read_disp_from_inst(): size " << size << "\n";
 
     if (offset + size > vec.size() || size > sizeof(T)) {
         return std::nullopt;
