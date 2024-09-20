@@ -110,7 +110,7 @@ void Mmu::ReadInstruction(Ldasm& lendec, VirtualAddr addr, std::vector<u8>& buf,
     ReadIntoPerm(addr, buf, exp_perm);
 }
 
-std::optional<VirtualAddr> Mmu::Alloc(size_t size) {
+std::optional<VirtualAddr> Mmu::mem_alloc(size_t size) {
     size_t align_size = (size + 0xf) & ~0xf; // Align to 16 bytes
 
     size_t end_alloc = cur_alloc + align_size;

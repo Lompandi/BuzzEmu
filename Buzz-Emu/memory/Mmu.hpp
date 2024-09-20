@@ -30,7 +30,7 @@ struct Mmu {
 
     Mmu(Mmu& other);
 
-    std::optional<VirtualAddr> Alloc(size_t size);
+    [[nodiscard]] std::optional<VirtualAddr> mem_alloc(size_t size);
     void SetPermission(VirtualAddr addr, size_t size, Permission perm);
 
     void WriteFrom(VirtualAddr addr, const std::vector<u8>& buf);
@@ -38,28 +38,22 @@ struct Mmu {
     void ReadIntoPerm(VirtualAddr addr, std::vector<u8>& buf, Permission expected_perm);
     void ReadInstruction(Ldasm& lendec, VirtualAddr addr, std::vector<u8>& buf, Permission exp_perm);
 
-    template<typename T>
+    template<typename T> requires std::is_trivially_copyable_v<T>
     std::optional<T> ReadPerm(VirtualAddr addr, Permission exp_perm) {
-        static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
-
         T tmp{};
         std::vector<u8> buf(sizeof(T));
         ReadIntoPerm(addr, buf, exp_perm);
-
         std::memcpy(&tmp, buf.data(), sizeof(T));
         return tmp;
     }
 
-    template<typename T>
+    template<typename T> requires std::is_trivially_copyable_v<T>
     std::optional<T> Read(const VirtualAddr& addr) {
-        static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
         return ReadPerm<T>(addr, PERM_READ);
     }
 
-    template<typename T>
+    template<typename T> requires std::is_trivially_copyable_v<T>
     void Write(VirtualAddr addr, T val) {
-        static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
-
         std::vector<u8> buf(sizeof(T));
         std::memcpy(buf.data(), &val, sizeof(T));
         WriteFrom(addr, buf);

@@ -57,12 +57,12 @@ int main()
     emu.SetReg<u64>(Register::Rip, 0x00001000);
 
     //set up a stack
-    auto base = emu.memory.Alloc(3 * 1024).value(); 
+    auto base = emu.memory.mem_alloc(3 * 1024).value(); 
     std::cout << "Stack: 0x" << std::hex << base << " - " << base + 0x2200 << "\n";
     emu.SetReg<u64>(Register::Rsp, base + 3 * 1024);
 
     // Example memory allocation and initialization
-    auto argv = emu.memory.Alloc(8).value(); // Allocate memory for argv
+    auto argv = emu.memory.mem_alloc(8).value(); // Allocate memory for argv
     emu.memory.Write(argv, "ConsoleApplication1.exe\0");        // Write a null-terminated string to memory
 
     // Push arguments onto the stack in the order used by the main function

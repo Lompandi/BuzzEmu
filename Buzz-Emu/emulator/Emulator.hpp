@@ -26,8 +26,8 @@ public:
 	/*
 	Create a new emulator with `size` bytes of memory
 	*/
-	Emulator(size_t size) : memory(size), registers{} {};
-	Emulator(Emulator& other) : memory(other.memory), registers(other.registers) {};
+	Emulator(size_t size) noexcept : memory(size), registers{} {};
+	Emulator(Emulator& other) noexcept : memory(other.memory), registers(other.registers) {};
 
 	/*
 	Load a file into th eemulators address space using the sections as described
@@ -52,7 +52,7 @@ public:
 
 	void SetReg64(Register reg, u64 val);
 
-	template <typename TReg = unsigned long long>
+	template <std::integral TReg = unsigned long long>
 	void SetReg(Register reg, TReg val, ByteRegister extra_mask = ByteRegister::LowByte) {
 		// Define masks and shifts for each register portion
 		constexpr uint64_t masks[] = {

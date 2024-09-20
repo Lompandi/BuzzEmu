@@ -131,8 +131,8 @@ void def_instruction_op2_MR8(Emulator& emu,
 }
 
 template <typename FuncType,
-	typename OPtype16, typename OPtype32, typename OPtype64,
-	typename OP2type16, typename OP2type32, typename OP2type64,
+	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
+	std::integral OP2type16, std::integral OP2type32, std::integral OP2type64,
 	typename... ExtraArgs>
 void def_instruction_op2_RM(Emulator& emu,
 	x86Dcctx* ctx,
@@ -357,8 +357,8 @@ enum class AddressMode : u8 {
 };
 //op2 in here will be automatically placed by the offset, so we will only needs to be dealing with op1
 template <typename FuncType,
-	typename OPtype16, typename OPtype32, typename OPtype64,
-	typename Immtype16, typename Immtype32, typename Immtype64,
+	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
+	std::integral Immtype16, std::integral Immtype32, std::integral Immtype64,
 	AddressMode amod = AddressMode::Access,
 	typename... ExtraArgs>
 void def_instruction_op2_MI(
@@ -535,7 +535,7 @@ void def_instruction_op2_MI(
 }
 
 template <typename FuncType,
-	typename Immtype16, typename Immtype32, typename Immtype64,
+	std::integral Immtype16, std::integral Immtype32, std::integral Immtype64,
 	typename... ExtraArgs>
 void def_instruction_op2_I(Emulator& emu,
 	x86Dcctx* ctx,
@@ -581,8 +581,8 @@ void def_instruction_op2_I(Emulator& emu,
 
 
 template <typename FuncType,
-	typename OPtype16, typename OPtype32, typename OPtype64,
-	typename OP2type16, typename OP2type32, typename OP2type64,
+	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
+	std::integral OP2type16, std::integral OP2type32, std::integral OP2type64,
 	typename... ExtraArgs>
 void def_instruction_op2_MR(Emulator& emu,
 	x86Dcctx* ctx,
@@ -813,7 +813,7 @@ void def_instruction_op2_MR(Emulator& emu,
 }
 
 template <typename FuncType,
-	typename OPtype16, typename OPtype32, typename OPtype64,
+	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
 	typename... ExtraArgs>
 void def_instruction_op1_M(Emulator& emu,
 	x86Dcctx* ctx,
