@@ -6,7 +6,12 @@
 #include "Block.hpp"
 #include "Permission.hpp"
 #include "VirtualAddr.hpp"
+#include "../include/Results.hpp"
 #include "../emulation/x86/Decoder.hpp"
+
+enum class memalloc_error {
+    no_space = 0,
+};
 
 /* An isolated memory space */
 struct Mmu {
@@ -30,7 +35,7 @@ struct Mmu {
 
     Mmu(Mmu& other);
 
-    [[nodiscard]] std::optional<VirtualAddr> mem_alloc(size_t size);
+    [[nodiscard]] bzmu::result<VirtualAddr, memalloc_error> mem_alloc(size_t size);
     void SetPermission(VirtualAddr addr, size_t size, Permission perm);
 
     void WriteFrom(VirtualAddr addr, const std::vector<u8>& buf);

@@ -51,6 +51,10 @@ u64 SubAndSetFlags(RflagsRegister& flags, uint64_t minuend, uint64_t subtrahend)
     return result;
 }
 
+void test_void_func(u64 i, u64 j, RflagsRegister& flags) {
+
+}
+
 //overload func 2:
 u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, RflagsRegister& flags) {
     // Perform the subtraction

@@ -104,7 +104,10 @@
     <ClInclude Include="emulation\x86\OperandEncoding.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\callcontext.hpp">
+    <ClInclude Include="include\Callcontext.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Results.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

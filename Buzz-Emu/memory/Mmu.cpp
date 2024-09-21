@@ -110,12 +110,12 @@ void Mmu::ReadInstruction(Ldasm& lendec, VirtualAddr addr, std::vector<u8>& buf,
     ReadIntoPerm(addr, buf, exp_perm);
 }
 
-std::optional<VirtualAddr> Mmu::mem_alloc(size_t size) {
+bzmu::result<VirtualAddr, memalloc_error> Mmu::mem_alloc(size_t size) {
     size_t align_size = (size + 0xf) & ~0xf; // Align to 16 bytes
 
     size_t end_alloc = cur_alloc + align_size;
     if (end_alloc > memory.size()) {
-        return std::nullopt; // Not enough space
+        return bzmu::result_error{ memalloc_error::no_space }; // Not enough space
     }
 
     VirtualAddr base = cur_alloc;

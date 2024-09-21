@@ -155,7 +155,8 @@
     <ClInclude Include="emulation\x86\SizeEnum.hpp" />
     <ClInclude Include="emulator\Emulator.hpp" />
     <ClInclude Include="emulator\VmExit.hpp" />
-    <ClInclude Include="include\callcontext.hpp" />
+    <ClInclude Include="include\Callcontext.hpp" />
+    <ClInclude Include="include\Results.hpp" />
     <ClInclude Include="memory\Block.hpp" />
     <ClInclude Include="memory\Mmu.hpp" />
     <ClInclude Include="memory\Permission.hpp" />

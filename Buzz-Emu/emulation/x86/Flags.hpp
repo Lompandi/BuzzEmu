@@ -46,6 +46,8 @@ u64 mov_operation(u64 dst, u64 src);
 //u64 SubAndSetFlags(RflagsRegister& flags, uint64_t minuend, uint64_t subtrahend);
 u64 SubAndSetFlags(uint64_t minuend, uint64_t subtrahend, RflagsRegister& flags);
 
+void test_void_func(u64 i, u64 j, RflagsRegister& flags);
+
 u64 AddAndSetFlags(u64 operand1, u64 operand2, RflagsRegister& flags);
 
 u64 CmpAndSetFlags(uint64_t src1, uint64_t src2, RflagsRegister& flags);

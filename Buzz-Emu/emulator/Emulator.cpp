@@ -53,7 +53,7 @@ void Emulator::SetReg64(Register reg, u64 val) {
 	registers[reg] = val;
 }
 
-void DEBUG_FUNC CrashDump(Emulator& emu) {
+void CrashDump(Emulator& emu) {
 	//dump general pourpose registers
 	std::cout << "rax: 0x" << std::hex << emu.Reg(Register::Rax);
 	std::cout << " rcx: 0x" << std::hex << emu.Reg(Register::Rcx) << "\n";
@@ -570,6 +570,7 @@ void Emulator::TestRun() {
 			case 0x04:
 				break;
 			case 0x05:
+				//Sub_83(instruction_param);
 				break;
 			case 0x06:
 				break;
@@ -627,7 +628,7 @@ void Emulator::TestRun() {
 		case Instruction::RET_C3:
 			break;
 		case Instruction::MOV_C7:
-			Mov_C7(instruction_param);
+			//Mov_C7(instruction_param);
 			break;
 		case 0xCC:
 			break;

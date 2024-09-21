@@ -9,8 +9,6 @@
 #include "../emulation/x86/Flags.hpp"
 #include "../emulation/x86/Register.hpp"
 
-#define DEBUG_FUNC 
-
 //All the state of the emulated system
 class Emulator {
 public:
@@ -19,8 +17,6 @@ public:
 
 	//All x86 64-bit register
 	std::array<u64, 17> registers;
-
-	//All x86 64 Cpu flags
 	RflagsRegister flags;
 
 	/*
@@ -48,8 +44,7 @@ public:
 	/*
 	Get a register from the guest
 	*/
-	u64 Reg(Register reg);
-
+	[[nodiscard]] u64 Reg(Register reg);
 	void SetReg64(Register reg, u64 val);
 
 	template <std::integral TReg = unsigned long long>

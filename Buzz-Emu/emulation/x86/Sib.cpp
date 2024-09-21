@@ -6,7 +6,7 @@
 
 constexpr std::array<uint8_t, 4> scale_table = { 1, 2, 4, 8 };
 
-#include <iostream> // For std::cout
+#include <iostream> 
 
 void set_sib_byte(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& clac_offset) {
     auto sib_byte = ctx->sib;

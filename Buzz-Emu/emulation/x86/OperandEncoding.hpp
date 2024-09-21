@@ -359,6 +359,7 @@ enum class AddressMode : u8 {
 template <typename FuncType,
 	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
 	std::integral Immtype16, std::integral Immtype32, std::integral Immtype64,
+	typename FuncRetType = u64,
 	AddressMode amod = AddressMode::Access,
 	typename... ExtraArgs>
 void def_instruction_op2_MI(
@@ -379,7 +380,7 @@ void def_instruction_op2_MI(
 	std::cout << "\nMI instruction: processing IMM: " << std::hex << (s64)(read_from_vec<u8>(inst, _offset_to_imm)) << "\n";
 
 	auto execute_instruction_reg = [&](auto OperandType, auto ImmType) {
-		if constexpr (std::is_void_v<FuncType>) {
+		if constexpr (std::is_void_v<FuncRetType>) {
 			call_function(
 				instr_emu_func,
 				static_cast<decltype(OperandType)>(op1),
@@ -404,7 +405,7 @@ void def_instruction_op2_MI(
 		else
 			_Op1 = static_cast<decltype(OperandType)>(Op1) + disp;
 
-		if constexpr (std::is_void_v<FuncType>) {
+		if constexpr (std::is_void_v<FuncRetType>) {
 			call_function(
 				instr_emu_func,
 				_Op1,
@@ -413,13 +414,11 @@ void def_instruction_op2_MI(
 		}
 		else {
 			emu.memory.WriteFrom(static_cast<decltype(OperandType)>(Op1) + disp,
-				to_byte_vec(
-					call_function(
+				to_byte_vec(call_function(
 						instr_emu_func,
 						_Op1,
 						static_cast<decltype(OperandType)>(read_from_vec<decltype(ImmType)>(inst, _offset_to_imm)),
-						std::forward<ExtraArgs>(extra_args)...)
-				));
+						std::forward<ExtraArgs>(extra_args)...)));
 		}
 	};
 	
