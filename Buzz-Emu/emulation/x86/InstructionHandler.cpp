@@ -17,7 +17,6 @@ void Add_01(BUZE_STANDARD_PARAM) {
 void Add_03(BUZE_STANDARD_PARAM) {
 	ModRM modrm;
 	set_modrm_byte(emu, ctx, modrm);
-
 	def_instruction_op2_RM<decltype(AddAndSetFlags), 
 		u16, u32, u64,
 		u16, u32, u64>(emu, ctx, inst, AddAndSetFlags, modrm, modrm.Reg.val, modrm.rm.reg_val, emu.flags);
