@@ -1,9 +1,14 @@
 
+#define NOMINMAX
+
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
+#include <comutil.h>
 
 #include "Fs.hpp"
+
+#pragma comment(lib, "comsuppw.lib")
 
 std::vector<u8> read_file(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary | std::ios::ate);
@@ -50,4 +55,10 @@ uint64_t ReadFromU64(uint64_t value, uint8_t size) {
 
     // Apply mask to the value
     return value & mask;
+}
+
+std::string wstring_to_string(const std::wstring& wstr) {
+    _bstr_t t = wstr.c_str();
+    char* pchar = (char*)t;
+    return pchar;
 }

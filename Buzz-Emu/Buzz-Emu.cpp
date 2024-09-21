@@ -6,6 +6,10 @@
 #include "emulator/Emulator.hpp"
 #include "emulation/x86/InstructionHandler.hpp"
 
+#include "pe/ImportHandler.hpp"
+
+#include <fstream>
+
 int main()
 {
     //NOT FINISHED¡@YET: https://youtu.be/iM3s8-umRO0?t=29219
@@ -47,8 +51,22 @@ int main()
 
     // also: load "C:\Windows\System32\msvcp140.dll"
 
+    std::vector<u8> content = read_file("C:\\Users\\USER\\source\\repos\\ConsoleApplication1\\x64\\Release\\ConsoleApplication1.exe");
+    PIMAGE_DOS_HEADER dos_hdr = (PIMAGE_DOS_HEADER)(content.data());
 
-    std::vector<Section> load_segment = { text_section, rdata, data, tail_data };
+    bzmu::pe::import_container container;
+    container.fetch_import_table(dos_hdr);
+    for (const auto& it : container._imported) {
+        std::wcout << "from dll: " << it.dll_name << "\n";
+    }
+
+    for (const auto& it : container._imported) {
+        std::cout << it.func_name << "\n";
+    }
+
+    
+
+    std::vector<Section> load_segment = {text_section, rdata, data, tail_data};
     emu.LoadExecutable("C:\\Users\\USER\\source\\repos\\ConsoleApplication1\\x64\\Release\\ConsoleApplication1.exe", load_segment);
 
     Emulator forked(emu);

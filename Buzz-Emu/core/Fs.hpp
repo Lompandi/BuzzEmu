@@ -8,6 +8,8 @@
 
 #include "../core/Memtypes.hpp"
 
+#include <iostream>
+
 std::vector<u8> read_file(const std::string& filename);
 std::vector<uint8_t> get_range(const std::vector<uint8_t>& vec, std::size_t offset, std::size_t length);
 
@@ -90,3 +92,5 @@ T CastFromVec(const std::vector<uint8_t>& vec, size_t offset) {
 }
 
 uint64_t ReadFromU64(uint64_t value, uint8_t size);
+
+std::string wstring_to_string(const std::wstring& wstr);

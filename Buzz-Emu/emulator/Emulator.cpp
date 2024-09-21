@@ -570,7 +570,7 @@ void Emulator::TestRun() {
 			case 0x04:
 				break;
 			case 0x05:
-				//Sub_83(instruction_param);
+				Sub_83(instruction_param);
 				break;
 			case 0x06:
 				break;
@@ -595,7 +595,7 @@ void Emulator::TestRun() {
 		case Instruction::MOV_8B:
 			break;
 		case Instruction::LEA_8D:
-			//Lea_8D(*this, &lendec.GetDecoderCtx(), inst, pc);
+			Lea_8D(*this, &lendec.GetDecoderCtx(), inst, pc);
 			break;
 			/*======================= No operation instruction =======================*/
 		case Instruction::NOP:
