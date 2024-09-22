@@ -228,7 +228,7 @@ void Mov_89(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
 			}
 		}
 		else if (mod_rm.rm.reg_set && mod_rm.rm.disp_size) {
-			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, 2).value(); if (opsize == OperandSize::X86_Osize_16bit) {
+			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(2)).value(); if (opsize == OperandSize::X86_Osize_16bit) {
 				emu.memory.WriteFrom(static_cast<u16>(mod_rm.rm.reg_val & 0xFFFF) + disp, to_byte_vec(static_cast<u16>(mod_rm.Reg.val & 0xFFFF)));
 			}
 			else if (opsize == OperandSize::X86_Osize_32bit) {
@@ -241,7 +241,7 @@ void Mov_89(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
 	}
 	else {
 		Sib sib_byte; u64 calc_offset = 0; set_sib_byte(emu, ctx, mod_rm, sib_byte, calc_offset); if (!sib_byte.valid) return; std::cout << "entering sib proccessing...\n"; if (mod_rm.rm.disp_size) {
-			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, 3).value(); if (opsize == OperandSize::X86_Osize_16bit) {
+			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(3)).value(); if (opsize == OperandSize::X86_Osize_16bit) {
 				emu.memory.WriteFrom(calc_offset + disp, to_byte_vec(static_cast<u16>(mod_rm.Reg.val & 0xFFFF)));
 			}
 			else if (opsize == OperandSize::X86_Osize_32bit) {
@@ -308,20 +308,16 @@ void Lea_8D(BUZE_STANDARD_PARAM, u64& pc) {
 	case AddressingSize::X86_Asize_32bit:
 		def_instruction_op2_RM<decltype(Lea),
 			u16, u32, u64,
-			u32, u32, u32>
-			(emu, ctx, inst, Lea, modrm, modrm.Reg.val, modrm.rm.reg_val, 
-				inst.size(),
-				pc,
-				read_disp_from_inst<s64>(inst, modrm.rm.disp_size, INSTR_POS(2)).value());
+			u32, u32, u32,
+			u64, AddressMode::AsValue>
+			(emu, ctx, inst, Lea, modrm, modrm.Reg.val, modrm.rm.reg_val);
 		break;
 	case AddressingSize::X86_Asize_64bit:
 		def_instruction_op2_RM<decltype(Lea),
 			u16, u32, u64,
-			u64, u64, u64>
-			(emu, ctx, inst, Lea, modrm, modrm.Reg.val, modrm.rm.reg_val,
-				inst.size(),
-				pc,
-				read_disp_from_inst<s64>(inst, modrm.rm.disp_size, INSTR_POS(2)).value());
+			u64, u64, u64,
+			u64, AddressMode::AsValue>
+			(emu, ctx, inst, Lea, modrm, modrm.Reg.val, modrm.rm.reg_val);
 		break;
 	default:
 		break;

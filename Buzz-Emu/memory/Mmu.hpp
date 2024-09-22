@@ -6,8 +6,8 @@
 #include "Block.hpp"
 #include "Permission.hpp"
 #include "VirtualAddr.hpp"
-#include "../include/Results.hpp"
 #include "../emulation/x86/Decoder.hpp"
+#include "../include/buzzemu/Results.hpp"
 
 enum class memalloc_error {
     no_space = 0,

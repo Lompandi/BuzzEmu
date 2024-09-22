@@ -242,8 +242,7 @@ u64 dec_and_set_flags(u64 src1, RflagsRegister& flags){
     return result;
 }
 
-u64 Lea(u64 dst, u64 src, size_t inst_size, u64& pc, s64 disp) {
-    auto effective_addr = pc + inst_size + disp;
-    std::cout << "[LEA] loading address: 0x" << std::hex << effective_addr << "\n";
-    return effective_addr;
+u64 Lea(u64 dst, u64 src) {
+    std::cout << "[LEA] loading address: 0x" << std::hex << src << "\n";
+    return src;
 }

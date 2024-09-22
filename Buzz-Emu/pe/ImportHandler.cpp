@@ -2,7 +2,7 @@
 #include "../core/Fs.hpp"
 #include "ImportHandler.hpp"
 #include "../core/Memtypes.hpp"
-#include "../include/Address.hpp"
+#include "../include/buzzemu/Address.hpp"
 
 namespace bzmu::pe {
 	void import_container::fetch_import_table(PIMAGE_DOS_HEADER dos_hdr) {
@@ -19,9 +19,6 @@ namespace bzmu::pe {
 			PIMAGE_IMPORT_DESCRIPTOR import_desc = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(
 				reinterpret_cast<u8*>(dos_hdr) +
 				rva_to_foa(nt_header, reinterpret_cast<PIMAGE_NT_HEADERS64>(nt_header)->OptionalHeader.DataDirectory[1].VirtualAddress).value());
-
-			std::wstring dll_name(128, L' ');
-			std::wstring func_name(128, L' ');
 			
 			PIMAGE_THUNK_DATA64 thunk_data64;
 			PIMAGE_IMPORT_BY_NAME import_by_name;
@@ -30,6 +27,10 @@ namespace bzmu::pe {
 			while (import_desc->OriginalFirstThunk ||
 				import_desc->TimeDateStamp || import_desc->ForwarderChain ||
 				import_desc->Name || import_desc->FirstThunk) {
+
+				std::wstring dll_name(128, L' ');
+				std::wstring func_name(128, L' ');
+
 				MultiByteToWideChar(CP_UTF8, 0,
 					reinterpret_cast<LPSTR>(reinterpret_cast<u8*>(dos_hdr) +
 						rva_to_foa(nt_header, import_desc->Name).value()), -1, dll_name.data(),
@@ -47,7 +48,6 @@ namespace bzmu::pe {
 						.dll_name = dll_name,
 						.func_name = "",
 					};
-
 					if (thunk_data64->u1.AddressOfData & IMAGE_ORDINAL_FLAG64) {	
 						import_func.func_name = "SN: " +
 							std::to_string(thunk_data64->u1.AddressOfData); /*Import via serial number*/
@@ -64,6 +64,29 @@ namespace bzmu::pe {
 				import_desc++;
 			}
 		}
+		sync_hash_table();
 		return;
+	}
+
+	result<std::wstring, search_error> import_container::get_dll_by_function(std::string_view func_name) {
+		auto it = _function_to_dll.find(func_name);
+		if (it != _function_to_dll.end())
+			return it->second;
+		return result_error{ search_error::not_found };
+	}
+
+	std::vector<std::string> import_container::get_functions_by_dll(std::wstring_view dll_name) {
+		std::vector<std::string> data;
+		for (const auto& it : _imported) {
+			if (it.dll_name == dll_name)
+				data.push_back(it.func_name);
+		}
+		return data;
+	}
+
+	void import_container::sync_hash_table() {
+		for (const auto& it : _imported) {
+			_function_to_dll[it.func_name] = it.dll_name;
+		}
 	}
 }

@@ -3,9 +3,9 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include "../core/Memtypes.hpp"
-#include "../include/Results.hpp"
-#include "../memory/VirtualAddr.hpp"
+#include "Results.hpp"
+#include "../../core/Memtypes.hpp"
+#include "../../memory/VirtualAddr.hpp"
 
 namespace bzmu::pe {
 	enum class address_error {

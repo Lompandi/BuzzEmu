@@ -8,8 +8,6 @@
 
 #include "pe/ImportHandler.hpp"
 
-#include <fstream>
-
 int main()
 {
     //NOT FINISHED¡@YET: https://youtu.be/iM3s8-umRO0?t=29219
@@ -56,16 +54,17 @@ int main()
 
     bzmu::pe::import_container container;
     container.fetch_import_table(dos_hdr);
-    for (const auto& it : container._imported) {
-        std::wcout << "from dll: " << it.dll_name << "\n";
+    auto result = container.get_dll_by_function("RtlVirtualUnwind");
+    std::wcout << L"Dll for function RtlVirtualUnwind: " << result.value() << "\n";
+    auto result2 = container.get_functions_by_dll(result.value());
+    std::cout << "Imported from kernel32.dll: \n";
+    std::cout << result2.size() << "\n";
+    for (const auto& it : result2) {
+        std::cout << it << "\n";
     }
 
-    for (const auto& it : container._imported) {
-        std::cout << it.func_name << "\n";
-    }
 
-    
-
+    //==================Load===================
     std::vector<Section> load_segment = {text_section, rdata, data, tail_data};
     emu.LoadExecutable("C:\\Users\\USER\\source\\repos\\ConsoleApplication1\\x64\\Release\\ConsoleApplication1.exe", load_segment);
 

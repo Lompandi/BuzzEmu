@@ -58,4 +58,4 @@ u64 dec_and_set_flags(u64 src1, RflagsRegister& flags);
 
 void SetLogicOpFlags(RflagsRegister& flags, u64 value);
 
-u64 Lea(u64 dst, u64 src, size_t inst_size, u64& pc, s64 disp);
+u64 Lea(u64 dst, u64 src);

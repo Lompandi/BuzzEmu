@@ -335,7 +335,6 @@ void def_instruction_op2_MI(
 	};
 
 	auto execute_instruction_mem = [&](auto OperandType, auto ImmType, auto Op1, auto disp) {
-
 		u64 _Op1 = 0;
 		if constexpr (amod == AddressMode::Access)
 			_Op1 = emu.memory.Read<decltype(OperandType)>(static_cast<decltype(OperandType)>(Op1) + disp).value();
@@ -358,7 +357,22 @@ void def_instruction_op2_MI(
 						std::forward<ExtraArgs>(extra_args)...)));
 		}
 	};
-	
+
+	auto exec_inst_mem = [&](auto Op1, auto disp) {
+		switch (GET_OPSIZE_ENUM(ctx->osize)) {
+		case OperandSize::X86_Osize_16bit:
+			execute_instruction_mem(OPtype16{}, Immtype16{}, Op1, disp);
+			break;
+		case OperandSize::X86_Osize_32bit:
+			execute_instruction_mem(OPtype32{}, Immtype32{}, Op1, disp);
+			break;
+		case OperandSize::X86_Osize_64bit:
+			execute_instruction_mem(OPtype64{}, Immtype64{}, Op1, disp);
+			break;
+		default:
+			break;
+		}
+	};
 
 	if (!ctx->p_sib) {
 		if (!mod_rm.rm.is_addr && mod_rm.rm.reg_set) {
@@ -377,54 +391,16 @@ void def_instruction_op2_MI(
 			}
 		}
 		else if (!mod_rm.rm.disp_size && mod_rm.rm.reg_set) {
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, Immtype16{}, op1, 0);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, Immtype32{}, op1, 0);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype64{}, Immtype64{}, op1, 0);
-				break;
-			default:
-				break;
-			}
+			exec_inst_mem(op1, 0);
 		}
 		else if (mod_rm.rm.reg_set && mod_rm.rm.disp_size) {
 			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, 2).value();
-
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, Immtype16{}, op1, disp);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, Immtype32{}, op1, disp);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype64{}, Immtype64{}, op1, disp);
-				break;
-			default:
-				break;
-			}
+			exec_inst_mem(op1, disp);
 		}
 		/*Only displacement*/
 		else if (!mod_rm.rm.reg_set && mod_rm.rm.disp_size) {
 			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, 2).value();
-
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, OPtype16{}, 0, disp);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, OPtype32{}, 0, disp);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype64{}, OPtype64{}, 0, disp);
-				break;
-			default:
-				break;
-			}
+			exec_inst_mem(0, disp);
 		}
 	}
 	else {
@@ -438,31 +414,10 @@ void def_instruction_op2_MI(
 
 		if (mod_rm.rm.disp_size) {
 			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(3)).value();
-
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, Immtype16{}, 0, calc_offset + disp);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, Immtype16{}, 0, calc_offset + disp);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype64{}, Immtype64{}, 0, calc_offset + disp);
-				break;
-			}
+			exec_inst_mem(0, calc_offset + disp);
 		}
 		else {
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, Immtype16{}, 0, calc_offset);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, Immtype32{}, 0, calc_offset);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype16{}, Immtype16{}, 0, calc_offset);
-				break;
-			}
+			exec_inst_mem(0, calc_offset);
 		}
 	}
 	return;

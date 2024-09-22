@@ -48,7 +48,7 @@
     <ClCompile Include="pe\ImportHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="include\Address.cpp">
+    <ClCompile Include="include\buzzemu\Address.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -110,16 +110,19 @@
     <ClInclude Include="emulation\x86\OperandEncoding.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Callcontext.hpp">
+    <ClInclude Include="include\buzzemu\Callcontext.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Results.hpp">
+    <ClInclude Include="include\buzzemu\Results.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="pe\ImportHandler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Address.hpp">
+    <ClInclude Include="include\buzzemu\Address.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\buzzemu\Defines.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
