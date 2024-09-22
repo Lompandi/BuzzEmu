@@ -5,7 +5,7 @@
 #include "../include/buzzemu/Address.hpp"
 
 namespace bzmu::pe {
-	void import_container::fetch_import_table(PIMAGE_DOS_HEADER dos_hdr) {
+	void import_container::set_import_table(PIMAGE_DOS_HEADER dos_hdr) {
 
 		auto nt_header = reinterpret_cast<PIMAGE_NT_HEADERS>(
 			reinterpret_cast<u8*>(dos_hdr) + dos_hdr->e_lfanew
@@ -49,7 +49,7 @@ namespace bzmu::pe {
 						.func_name = "",
 					};
 					if (thunk_data64->u1.AddressOfData & IMAGE_ORDINAL_FLAG64) {	
-						import_func.func_name = "SN: " +
+						import_func.func_name = "{SN}: " +
 							std::to_string(thunk_data64->u1.AddressOfData); /*Import via serial number*/
 					}
 					else {

@@ -140,7 +140,10 @@
     <ClCompile Include="emulator\Emulator.cpp" />
     <ClCompile Include="include\buzzemu\Address.cpp" />
     <ClCompile Include="memory\Mmu.cpp" />
+    <ClCompile Include="include\buzzemu\Strings.cpp" />
+    <ClCompile Include="pe\ExportHandler.cpp" />
     <ClCompile Include="pe\ImportHandler.cpp" />
+    <ClCompile Include="pe\Mapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\Fs.hpp" />
@@ -165,8 +168,12 @@
     <ClInclude Include="memory\Mmu.hpp" />
     <ClInclude Include="memory\Permission.hpp" />
     <ClInclude Include="memory\Section.hpp" />
+    <ClInclude Include="include\buzzemu\Strings.hpp" />
     <ClInclude Include="memory\VirtualAddr.hpp" />
+    <ClInclude Include="pe\ExportHandler.hpp" />
     <ClInclude Include="pe\ImportHandler.hpp" />
+    <ClInclude Include="pe\linker\Linker.hpp" />
+    <ClInclude Include="pe\Mapper.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="trash_can\old_instruction_handlers.txt" />

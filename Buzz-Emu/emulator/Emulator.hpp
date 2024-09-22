@@ -26,7 +26,7 @@ public:
 	Emulator(Emulator& other) noexcept : memory(other.memory), registers(other.registers) {};
 
 	/*
-	Load a file into th eemulators address space using the sections as described
+	Load a file into th emulators address space using the sections as described
 	*/
 	bool LoadExecutable(const std::string& filename, const std::vector<Section>& sections);
 

@@ -20,11 +20,11 @@ namespace bzmu::pe {
 	};
 
 	struct import_container {
-		void fetch_import_table(PIMAGE_DOS_HEADER dos_hdr);
+		void set_import_table(PIMAGE_DOS_HEADER dos_hdr);
 		
 		[[nodiscard]] result<std::wstring, search_error> get_dll_by_function(std::string_view func_name);
 		[[nodiscard]] std::vector<std::string> get_functions_by_dll(std::wstring_view dll_name);
-		[[nodiscard]] std::vector<import_function> get_imported_functions() {
+		[[nodiscard]] const std::vector<import_function>& get_imported_functions() {
 			return _imported;
 		}
 	private:

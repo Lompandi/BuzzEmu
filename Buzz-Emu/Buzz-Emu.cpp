@@ -7,6 +7,7 @@
 #include "emulation/x86/InstructionHandler.hpp"
 
 #include "pe/ImportHandler.hpp"
+#include "pe/ExportHandler.hpp"
 
 int main()
 {
@@ -53,7 +54,7 @@ int main()
     PIMAGE_DOS_HEADER dos_hdr = (PIMAGE_DOS_HEADER)(content.data());
 
     bzmu::pe::import_container container;
-    container.fetch_import_table(dos_hdr);
+    container.set_import_table(dos_hdr);
     auto result = container.get_dll_by_function("RtlVirtualUnwind");
     std::wcout << L"Dll for function RtlVirtualUnwind: " << result.value() << "\n";
     auto result2 = container.get_functions_by_dll(result.value());
@@ -63,6 +64,12 @@ int main()
         std::cout << it << "\n";
     }
 
+    std::cout << "\nExported function from msvcp140.dll:\n";
+    std::vector<u8> libcpp_content = read_file("C:\\Windows\\System32\\msvcp140.dll");
+    PIMAGE_DOS_HEADER dos_hdr2 = (PIMAGE_DOS_HEADER)(libcpp_content.data());
+    bzmu::pe::export_container container2;
+    container2.set_export_container(dos_hdr2);
+    std::cout << "Address for std::cout: " << std::hex << container2.get_function_address("?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A") << '\n';
 
     //==================Load===================
     std::vector<Section> load_segment = {text_section, rdata, data, tail_data};

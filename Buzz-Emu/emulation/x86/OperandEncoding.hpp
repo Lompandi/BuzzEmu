@@ -4,12 +4,7 @@
 #include "ModRM.hpp"
 #include "../../core/Fs.hpp"
 #include "../../core/Memtypes.hpp"
-
-/*
-for displacement, there will be a varible name "disp" containing the displacement value
-for SIB offset, it will be "calc_offset"
-*/
-//c++20 function def:
+#include "../../include/buzzemu/Defines.hpp"
 
 #define GET_L_REG(r) static_cast<u8>(r & 0xFF)
 #define GET_H_REG(r) static_cast<u8>((r >> 8) & 0xFF)
@@ -23,18 +18,19 @@ for SIB offset, it will be "calc_offset"
 #define _INSTR_POS(ctx, offset) (ctx)->pos_opcode + offset
 #define INSTR_POS(offset) _INSTR_POS(ctx, offset)
 
-
-//helper function to unpack :
-// Helper function to unpack arguments from a tuple and call a function
-
 enum class AddressMode : u8 {
 	Access = 0,  // Access the value at the address (e.g., MOV)
 	AsValue,     // Use the address itself as a value (e.g., LEA)
 };
 
-//TODO: RECODE THIS TO FORM AN AL-AH register encoding instead of 32-64 bit register encoding
+/*
+for displacement, there will be a varible name "disp" containing the displacement value
+for SIB offset, it will be "calc_offset"
+*/
+//c++20 function def:
+
 template <typename FuncType, typename... ExtraArgs>
-void def_instruction_op2_MR8(Emulator& emu,
+__forceinline void def_instruction_op2_MR8(Emulator& emu,
 	x86Dcctx* ctx,
 	const std::vector<u8>& inst,
 	FuncType instr_emu_func,
@@ -138,7 +134,7 @@ template <typename FuncType,
 	typename FuncRetType = u64,
 	AddressMode amod = AddressMode::Access,
 	typename... ExtraArgs>
-void def_instruction_op2_RM(Emulator& emu,
+BZMU_FORCEINLINE void def_instruction_op2_RM(Emulator& emu,
 	x86Dcctx* ctx,
 	const std::vector<u8>& inst,
 	FuncType instr_emu_func,
@@ -187,6 +183,21 @@ void def_instruction_op2_RM(Emulator& emu,
 				extra_args...), mod_rm.Reg.h_l);
 		}
 	};
+	auto exec_inst_mem = [&](auto Op2, auto disp) {
+		switch (GET_OPSIZE_ENUM(ctx->osize)) {
+		case OperandSize::X86_Osize_16bit:
+			execute_instruction_mem(OPtype16{}, OP2type16{}, Op2, disp);
+			break;
+		case OperandSize::X86_Osize_32bit:
+			execute_instruction_mem(OPtype32{}, OP2type16{}, Op2, disp);
+			break;
+		case OperandSize::X86_Osize_64bit:
+			execute_instruction_mem(OPtype64{}, OP2type16{}, Op2, disp);
+			break;
+		default:
+			break;
+		}
+	};
 
 	if (!mod_rm.rm.disp_size && !mod_rm.rm.reg_set) return;
 	if (!ctx->p_sib) {
@@ -206,51 +217,15 @@ void def_instruction_op2_RM(Emulator& emu,
 			}
 		}
 		else if (!mod_rm.rm.disp_size) {
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, OP2type16{}, op2, 0);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, OP2type32{}, op2, 0);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype64{}, OP2type64{}, op2, 0);
-				break;
-			default:
-				break;
-			}
+			exec_inst_mem(op2, 0);
 		}
 		else if (mod_rm.rm.reg_set && mod_rm.rm.disp_size) {
 			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(2)).value();
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, OP2type16{}, op2, disp);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, OP2type32{}, op2, disp);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype64{}, OP2type64{}, op2, disp);
-				break;
-			default:
-				break;
-			}
+			exec_inst_mem(op2, disp);
 		}
 		else if (mod_rm.rm.disp_size) {
 			s64 disp = emu.Reg(Register::Rip) + read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(2)).value() + inst.size();
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, OP2type16{}, 0, disp);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, OP2type32{}, 0, disp);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype64{}, OP2type64{}, 0, disp);
-				break;
-			default:
-				break;
-			}
+			exec_inst_mem(0, disp);
 		}
 	}																																																			\
 	else {
@@ -262,46 +237,22 @@ void def_instruction_op2_RM(Emulator& emu,
 
 		if (mod_rm.rm.disp_size) {
 			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(3)).value();
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, OP2type16{}, 0, calc_offset + disp);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, OP2type32{}, 0, calc_offset + disp);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype64{}, OP2type64{}, 0, calc_offset + disp);
-				break;
-			default:
-				break;
-			}
+			exec_inst_mem(0, calc_offset + disp);
 		}																																																					   \
 		else {
-			switch (GET_OPSIZE_ENUM(ctx->osize)) {
-			case OperandSize::X86_Osize_16bit:
-				execute_instruction_mem(OPtype16{}, OP2type16{}, 0, calc_offset);
-				break;
-			case OperandSize::X86_Osize_32bit:
-				execute_instruction_mem(OPtype32{}, OP2type32{}, 0, calc_offset);
-				break;
-			case OperandSize::X86_Osize_64bit:
-				execute_instruction_mem(OPtype64{}, OP2type64{}, 0, calc_offset);
-				break;
-			default:
-				break;
-			}
+			exec_inst_mem(0, calc_offset);
 		}
 	}
 	return;
 }
-//op2 in here will be automatically placed by the offset, so we will only needs to be dealing with op1
+
 template <typename FuncType,
 	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
 	std::integral Immtype16, std::integral Immtype32, std::integral Immtype64,
 	typename FuncRetType = u64,
 	AddressMode amod = AddressMode::Access,
 	typename... ExtraArgs>
-void def_instruction_op2_MI(
+BZMU_FORCEINLINE void def_instruction_op2_MI(
 	Emulator& emu,
 	x86Dcctx* ctx,
 	const std::vector<u8>& inst,
@@ -411,7 +362,6 @@ void def_instruction_op2_MI(
 			return;
 
 		_offset_to_imm += 1;
-
 		if (mod_rm.rm.disp_size) {
 			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(3)).value();
 			exec_inst_mem(0, calc_offset + disp);
