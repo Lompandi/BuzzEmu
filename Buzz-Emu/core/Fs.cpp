@@ -22,7 +22,28 @@ std::vector<u8> read_file(const std::string& filename) {
     std::vector<uint8_t> buffer(size);
 
     if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
-        throw std::runtime_error("Failed to read file: " + filename);
+        //throw std::runtime_error("Failed to read file: " + filename);
+        return buffer; //TMP
+    }
+
+    return buffer;
+}
+
+
+std::vector<u8> read_file(const std::wstring& filename) {
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + std::string(filename.begin(), filename.end()));
+    }
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<u8> buffer(size);
+
+    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+        //throw std::runtime_error("Failed to read file: " + std::string(filename.begin(), filename.end()));
+        return buffer; //TMP
     }
 
     return buffer;

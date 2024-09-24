@@ -11,6 +11,7 @@
 #include <iostream>
 
 std::vector<u8> read_file(const std::string& filename);
+std::vector<u8> read_file(const std::wstring& filename);
 std::vector<uint8_t> get_range(const std::vector<uint8_t>& vec, std::size_t offset, std::size_t length);
 
 template<typename T>

@@ -10,6 +10,8 @@ namespace bzmu::pe {
 	enum class map_result {
 		success = 0,
 		map_pe_not_valid,
+		sysdir_not_found,
+		mem_no_space,
 	};
 
 	class pe_mapper {
