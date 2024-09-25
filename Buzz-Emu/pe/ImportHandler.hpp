@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "../memory/VirtualAddr.hpp"
 #include "../include/buzzemu/Results.hpp"
 #include "../include/buzzemu/Defines.hpp"
 

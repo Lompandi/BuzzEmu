@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "ExportHandler.hpp"
 #include "../core/Memtypes.hpp"
 #include "../emulator/Emulator.hpp"
 #include "../include/buzzemu/Results.hpp"
@@ -15,6 +16,7 @@ namespace bzmu::pe {
 	};
 
 	class pe_mapper {
+	public:
 		result<export_container, map_result> map_into_mem(Emulator& emu, std::vector<u8>& binary);
 	};
 }

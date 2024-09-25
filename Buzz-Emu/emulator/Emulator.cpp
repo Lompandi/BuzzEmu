@@ -6,6 +6,7 @@
 
 #include "VmExit.hpp"
 #include "../core/Fs.hpp"
+#include "../pe/Mapper.hpp"
 #include "../emulation/x86/ModRM.hpp"
 #include "../emulation/x86/InstructionHandler.hpp"
 
@@ -14,7 +15,11 @@
 //TUTORIAL AT: https://youtu.be/iM3s8-umRO0?t=28749 
 
 bool Emulator::LoadExecutable(const std::string& filename, const std::vector<Section>& sections) {
-
+	bzmu::pe::pe_mapper mapper;
+	std::vector<u8> contents = read_file(filename);
+	mapper.map_into_mem(*this, contents);
+	return true;
+	/*
 	//Read the input file
 	std::vector<u8> contents = read_file(filename);
 
@@ -42,7 +47,7 @@ bool Emulator::LoadExecutable(const std::string& filename, const std::vector<Sec
 		);
 	}
 
-	return true;
+	return true;*/
 }
 
 u64 Emulator::Reg(Register reg) {

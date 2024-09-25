@@ -33,7 +33,8 @@ std::vector<u8> read_file(const std::string& filename) {
 std::vector<u8> read_file(const std::wstring& filename) {
     std::ifstream file(filename, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file: " + std::string(filename.begin(), filename.end()));
+        //throw std::runtime_error("Failed to open file: " + std::string(filename.begin(), filename.end()));
+        return std::vector<u8>{}; //TMP
     }
 
     std::streamsize size = file.tellg();

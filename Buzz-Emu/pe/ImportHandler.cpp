@@ -29,15 +29,11 @@ namespace bzmu::pe {
 				import_desc->TimeDateStamp || import_desc->ForwarderChain ||
 				import_desc->Name || import_desc->FirstThunk) {
 
-				std::wstring dll_name(128, L' ');
-				std::wstring func_name(128, L' ');
+				std::wstring dll_name;
+				std::wstring func_name;
 
-				dll_name = 
-
-				MultiByteToWideChar(CP_UTF8, 0,
-					reinterpret_cast<LPSTR>(reinterpret_cast<u8*>(dos_hdr) +
-						rva_to_foa(nt_header, import_desc->Name).value()), -1, dll_name.data(),
-					dll_name.size());
+				dll_name = bytes_to_wstring(reinterpret_cast<LPSTR>(reinterpret_cast<u8*>(dos_hdr) +
+					rva_to_foa(nt_header, import_desc->Name).value()));
 
 				thunk_data64 = reinterpret_cast<PIMAGE_THUNK_DATA64>(
 					reinterpret_cast<u8*>(dos_hdr) +
@@ -57,8 +53,7 @@ namespace bzmu::pe {
 							std::to_string(thunk_data64->u1.AddressOfData); /*Import via serial number*/
 					}
 					else {
-						MultiByteToWideChar(CP_UTF8, 0, import_by_name->Name, -1,
-							func_name.data(), func_name.size());
+						func_name = bytes_to_wstring(import_by_name->Name);
 						import_func.func_name = wstring_to_string(func_name);
 					}
 					thunk_data64++;

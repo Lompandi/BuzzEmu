@@ -1,7 +1,9 @@
 
 #define NOMINMAX
 
+#include <cwctype>
 #include <algorithm>
+#include <iomanip>
 
 #include "Mapper.hpp"
 #include "../core/Fs.hpp"
@@ -29,7 +31,7 @@ namespace bzmu::pe {
 			auto section = section_hdr[i];
 			ret.push_back(
 				Section(
-					0, /*TMP ADDRESS SINCE CODE DONT NEED IT YET*/
+					rva_to_foa(nt_hdr, section.VirtualAddress).value(), /*TMP ADDRESS SINCE CODE DONT NEED IT YET*/
 					section.VirtualAddress,
 					section.SizeOfRawData,
 					section.SizeOfRawData,
@@ -48,6 +50,16 @@ namespace bzmu::pe {
 			reinterpret_cast<u8*>(dos_hdr) + dos_hdr->e_lfanew);
 	}
 
+	PIMAGE_NT_HEADERS get_nt_hdrs(PIMAGE_DOS_HEADER dos_hdr) {
+		// Read section to map from the main pe file
+		return reinterpret_cast<PIMAGE_NT_HEADERS>(
+			reinterpret_cast<u8*>(dos_hdr) + dos_hdr->e_lfanew);
+	}
+
+	PIMAGE_DOS_HEADER get_dos_hdr(std::vector<u8>& binary) {
+		return reinterpret_cast<PIMAGE_DOS_HEADER>(binary.data());
+	}
+
 	result<export_container, map_result> pe_mapper::map_into_mem(Emulator& emu, std::vector<u8>& binary) {
 		PIMAGE_DOS_HEADER dos_hdr =
 			reinterpret_cast<PIMAGE_DOS_HEADER>(binary.data());
@@ -61,20 +73,14 @@ namespace bzmu::pe {
 		std::vector<Section> exe_section_hdrs =
 			get_pe_sections(image_nt_hdrs);
 
-		auto update_alloc_ptr = [&]() {
-			emu.memory.cur_alloc = std::max(
-				emu.memory.cur_alloc,
-				(dll_virtaddr + section.mem_size + 0xf) & ~0xf
-			);
-    	};
-
+		std::cout << "0x" << std::hex << exe_section_hdrs[0].virt_addr << " - ";
 		for (const auto& section : exe_section_hdrs) {
 			//Set memory to writable
 			emu.memory.SetPermission(section.virt_addr, section.mem_size, PERM_WRITE);
-
-			//Write in th eoriginal file contents 
+	
+			//Write in th original file contents 
 			emu.memory.WriteFrom(section.virt_addr, get_range(binary, section.file_off, section.file_size));
-
+			
 			//Write in any paddings with zeros
 			if (section.mem_size > section.file_size) [[likely]] {
 				std::vector<u8> padding(section.mem_size - section.file_size);
@@ -90,6 +96,8 @@ namespace bzmu::pe {
 				(section.virt_addr + section.mem_size + 0xf) & ~0xf
 			);
 		}
+
+		std::cout << "0x" << std::hex << emu.memory.cur_alloc << " [Program]\n";
 
 		import_container _imported;
 		export_container _exported;
@@ -114,25 +122,27 @@ namespace bzmu::pe {
 			/* fetch the updated allocation pointer */
 			VirtualAddr dll_base = emu.memory.cur_alloc; //dll mapping base TODO: make this an actual virtual mapping
 
-			std::wstring sys_path(sys_dir_len + 1
-				+ dll_file.size(), L'\0');
-			GetSystemDirectory(sys_path.data(), sys_dir_len + 1);
-			sys_path += L'\\' + dll_file;
+			std::wstring sys_path(sys_dir_len - 1, L'\0'); 
+			GetSystemDirectoryW(sys_path.data(), sys_dir_len); 
 
-			// Fetch the dll's content
+			sys_path += L"\\" + dll_file;
+
+			/* Load import dll into the memory */
 			dll_content.clear();
 			dll_content = read_file(sys_path);
-			if (dll_content.empty())
+			if (dll_content.empty()) {
+				std::wcout << L"dll: " << sys_path << L" - not found\n";
 				continue; // Skip this dll, not found
-
-			auto dll_nt_hdr = get_nt_hdrs(dll_content);
+			}
+			auto dos_hdr	= get_dos_hdr(dll_content);
+			auto dll_nt_hdr = get_nt_hdrs(dos_hdr);
 			if (dll_nt_hdr->Signature != IMAGE_NT_SIGNATURE) [[unlikely]] {
 				continue; // Skip invalid dlls
 			}
 
 			/* add dll's export function for the linker */
 			auto dll_tbl_orig_size = _exported.get_export_table().size();
-			_exported.set_export_container(dll_nt_hdr);
+			_exported.set_export_container(dos_hdr);
 			for(auto i = dll_tbl_orig_size; /* start from the new imported dll in current iteration */
 			 i < _exported.get_export_table().size(); i++){
 				/* add the dynamic address to the base address */
@@ -141,12 +151,13 @@ namespace bzmu::pe {
 
 			auto section_hdrs = get_pe_sections(dll_nt_hdr);
 
+			std::wcout << L"0x" << std::hex << dll_base << " - ";
 			for (const auto& section : section_hdrs) {
 				VirtualAddr dll_virtaddr = section.virt_addr + dll_base;
 				emu.memory.SetPermission(dll_virtaddr, section.mem_size, PERM_WRITE);
 
-				//Write in th eoriginal file contents 
-				emu.memory.WriteFrom(dll_virtaddr, get_range(binary, section.file_off, section.file_size));
+				//Write in the original file contents 
+				emu.memory.WriteFrom(dll_virtaddr, get_range(dll_content, section.file_off, section.file_size));
 
 				//Write in any paddings with zeros
 				if (section.mem_size > section.file_size) [[likely]] {
@@ -158,8 +169,12 @@ namespace bzmu::pe {
 				emu.memory.SetPermission(dll_virtaddr, section.mem_size, section.permission);
 
 				//Update the allocator beyond any sections we load
-				update_alloc_ptr();
+				emu.memory.cur_alloc = std::max(
+					emu.memory.cur_alloc,
+					(dll_virtaddr + section.mem_size + 0xf) & ~0xf
+				);
 			}
+			std::wcout << L"0x" << std::hex << emu.memory.cur_alloc << L" [" << dll_file << L"]\n";
 		}
 		return _exported;
 	}
