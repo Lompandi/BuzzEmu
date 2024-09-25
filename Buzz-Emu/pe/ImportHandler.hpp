@@ -13,6 +13,7 @@ namespace bzmu::pe {
 	struct import_function {
 		std::wstring dll_name;
 		std::string func_name;
+		VirtualAddr func_addr; //the address linker need to resolve and fill in in runtime
 	};
 
 	enum class search_error {

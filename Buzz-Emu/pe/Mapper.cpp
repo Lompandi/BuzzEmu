@@ -48,7 +48,7 @@ namespace bzmu::pe {
 			reinterpret_cast<u8*>(dos_hdr) + dos_hdr->e_lfanew);
 	}
 
-	map_result pe_mapper::map_into_mem(Emulator& emu, std::vector<u8>& binary) {
+	result<export_container, map_result> pe_mapper::map_into_mem(Emulator& emu, std::vector<u8>& binary) {
 		PIMAGE_DOS_HEADER dos_hdr =
 			reinterpret_cast<PIMAGE_DOS_HEADER>(binary.data());
 		
@@ -56,10 +56,17 @@ namespace bzmu::pe {
 		PIMAGE_NT_HEADERS image_nt_hdrs = reinterpret_cast<PIMAGE_NT_HEADERS>(
 			reinterpret_cast<u8*>(dos_hdr) + dos_hdr->e_lfanew);
 		if (image_nt_hdrs->Signature != IMAGE_NT_SIGNATURE)
-			return map_result::map_pe_not_valid;
+			return result_error{ map_result::map_pe_not_valid };
 
 		std::vector<Section> exe_section_hdrs =
 			get_pe_sections(image_nt_hdrs);
+
+		auto update_alloc_ptr = [&]() {
+			emu.memory.cur_alloc = std::max(
+				emu.memory.cur_alloc,
+				(dll_virtaddr + section.mem_size + 0xf) & ~0xf
+			);
+    	};
 
 		for (const auto& section : exe_section_hdrs) {
 			//Set memory to writable
@@ -93,16 +100,20 @@ namespace bzmu::pe {
 		for (const auto& func : data) {
 			if (std::find(imported_dlls.begin(), imported_dlls.end(), func.dll_name)
 				== imported_dlls.end())
-				imported_dlls.push_back(func.dll_name);
+				imported_dlls.push_back(func.dll_name); /* prevent duplicated dll */
 		}
 
 		auto sys_dir_len = GetSystemDirectory(NULL, 0);
 		if (!sys_dir_len)
-			return map_result::sysdir_not_found;
+			return result_error{ map_result::sysdir_not_found };
 
 		std::vector<u8> dll_content;
 
+		/* Map all imported dlls */
 		for (const auto& dll_file : imported_dlls) {
+			/* fetch the updated allocation pointer */
+			VirtualAddr dll_base = emu.memory.cur_alloc; //dll mapping base TODO: make this an actual virtual mapping
+
 			std::wstring sys_path(sys_dir_len + 1
 				+ dll_file.size(), L'\0');
 			GetSystemDirectory(sys_path.data(), sys_dir_len + 1);
@@ -118,31 +129,38 @@ namespace bzmu::pe {
 			if (dll_nt_hdr->Signature != IMAGE_NT_SIGNATURE) [[unlikely]] {
 				continue; // Skip invalid dlls
 			}
+
+			/* add dll's export function for the linker */
+			auto dll_tbl_orig_size = _exported.get_export_table().size();
+			_exported.set_export_container(dll_nt_hdr);
+			for(auto i = dll_tbl_orig_size; /* start from the new imported dll in current iteration */
+			 i < _exported.get_export_table().size(); i++){
+				/* add the dynamic address to the base address */
+				_exported.get_export_table()[i].address += dll_base;
+			}
+
 			auto section_hdrs = get_pe_sections(dll_nt_hdr);
 
 			for (const auto& section : section_hdrs) {
-				//Set memory to writable
-				emu.memory.SetPermission(section.virt_addr, section.mem_size, PERM_WRITE);
+				VirtualAddr dll_virtaddr = section.virt_addr + dll_base;
+				emu.memory.SetPermission(dll_virtaddr, section.mem_size, PERM_WRITE);
 
 				//Write in th eoriginal file contents 
-				emu.memory.WriteFrom(section.virt_addr, get_range(binary, section.file_off, section.file_size));
+				emu.memory.WriteFrom(dll_virtaddr, get_range(binary, section.file_off, section.file_size));
 
 				//Write in any paddings with zeros
 				if (section.mem_size > section.file_size) [[likely]] {
 					std::vector<u8> padding(section.mem_size - section.file_size);
-					emu.memory.WriteFrom(section.virt_addr + section.file_size, padding);
+					emu.memory.WriteFrom(dll_virtaddr + section.file_size, padding);
 				}
 
 				//Demote permissions to originals
-				emu.memory.SetPermission(section.virt_addr, section.mem_size, section.permission);
+				emu.memory.SetPermission(dll_virtaddr, section.mem_size, section.permission);
 
 				//Update the allocator beyond any sections we load
-				emu.memory.cur_alloc = std::max(
-					emu.memory.cur_alloc,
-					(section.virt_addr + section.mem_size + 0xf) & ~0xf
-				);
+				update_alloc_ptr();
 			}
 		}
-		return map_result::success;
+		return _exported;
 	}
 }

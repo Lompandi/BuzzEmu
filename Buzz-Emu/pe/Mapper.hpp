@@ -15,6 +15,6 @@ namespace bzmu::pe {
 	};
 
 	class pe_mapper {
-		map_result map_into_mem(Emulator& emu, std::vector<u8>& binary);
+		result<export_container, map_result> map_into_mem(Emulator& emu, std::vector<u8>& binary);
 	};
 }

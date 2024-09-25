@@ -2,6 +2,7 @@
 #include "../core/Fs.hpp"
 #include "ImportHandler.hpp"
 #include "../core/Memtypes.hpp"
+#include "../include/buzzemu/Strings.hpp"
 #include "../include/buzzemu/Address.hpp"
 
 namespace bzmu::pe {
@@ -31,6 +32,8 @@ namespace bzmu::pe {
 				std::wstring dll_name(128, L' ');
 				std::wstring func_name(128, L' ');
 
+				dll_name = 
+
 				MultiByteToWideChar(CP_UTF8, 0,
 					reinterpret_cast<LPSTR>(reinterpret_cast<u8*>(dos_hdr) +
 						rva_to_foa(nt_header, import_desc->Name).value()), -1, dll_name.data(),
@@ -47,9 +50,10 @@ namespace bzmu::pe {
 					import_function import_func = {
 						.dll_name = dll_name,
 						.func_name = "",
+						.func_addr = 0 //TODO
 					};
 					if (thunk_data64->u1.AddressOfData & IMAGE_ORDINAL_FLAG64) {	
-						import_func.func_name = "{SN}: " +
+						import_func.func_name = "{ORD}: " +
 							std::to_string(thunk_data64->u1.AddressOfData); /*Import via serial number*/
 					}
 					else {
