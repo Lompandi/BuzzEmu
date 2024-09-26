@@ -6,7 +6,10 @@
 #include <iomanip>
 
 #include "Mapper.hpp"
+
+#include "PeUtils.hpp"
 #include "../core/Fs.hpp"
+#include "linker/Linker.hpp"
 #include "ImportHandler.hpp"
 #include "ExportHandler.hpp"
 #include "../memory/Section.hpp"
@@ -41,25 +44,6 @@ namespace bzmu::pe {
 		return ret;
 	}
 
-	PIMAGE_NT_HEADERS get_nt_hdrs(std::vector<u8>& binary) {
-		PIMAGE_DOS_HEADER dos_hdr =
-			reinterpret_cast<PIMAGE_DOS_HEADER>(binary.data());
-
-		// Read section to map from the main pe file
-		return reinterpret_cast<PIMAGE_NT_HEADERS>(
-			reinterpret_cast<u8*>(dos_hdr) + dos_hdr->e_lfanew);
-	}
-
-	PIMAGE_NT_HEADERS get_nt_hdrs(PIMAGE_DOS_HEADER dos_hdr) {
-		// Read section to map from the main pe file
-		return reinterpret_cast<PIMAGE_NT_HEADERS>(
-			reinterpret_cast<u8*>(dos_hdr) + dos_hdr->e_lfanew);
-	}
-
-	PIMAGE_DOS_HEADER get_dos_hdr(std::vector<u8>& binary) {
-		return reinterpret_cast<PIMAGE_DOS_HEADER>(binary.data());
-	}
-
 	result<export_container, map_result> pe_mapper::map_into_mem(Emulator& emu, std::vector<u8>& binary) {
 		PIMAGE_DOS_HEADER dos_hdr =
 			reinterpret_cast<PIMAGE_DOS_HEADER>(binary.data());
@@ -73,31 +57,7 @@ namespace bzmu::pe {
 		std::vector<Section> exe_section_hdrs =
 			get_pe_sections(image_nt_hdrs);
 
-		std::cout << "0x" << std::hex << exe_section_hdrs[0].virt_addr << " - ";
-		for (const auto& section : exe_section_hdrs) {
-			//Set memory to writable
-			emu.memory.SetPermission(section.virt_addr, section.mem_size, PERM_WRITE);
-	
-			//Write in th original file contents 
-			emu.memory.WriteFrom(section.virt_addr, get_range(binary, section.file_off, section.file_size));
-			
-			//Write in any paddings with zeros
-			if (section.mem_size > section.file_size) [[likely]] {
-				std::vector<u8> padding(section.mem_size - section.file_size);
-				emu.memory.WriteFrom(section.virt_addr + section.file_size, padding);
-			}
-
-			//Demote permissions to originals
-			emu.memory.SetPermission(section.virt_addr, section.mem_size, section.permission);
-
-			//Update the allocator beyond any sections we load
-			emu.memory.cur_alloc = std::max(
-				emu.memory.cur_alloc,
-				(section.virt_addr + section.mem_size + 0xf) & ~0xf
-			);
-		}
-
-		std::cout << "0x" << std::hex << emu.memory.cur_alloc << " [Program]\n";
+		//we will then map the dlls first
 
 		import_container _imported;
 		export_container _exported;
@@ -176,6 +136,37 @@ namespace bzmu::pe {
 			}
 			std::wcout << L"0x" << std::hex << emu.memory.cur_alloc << L" [" << dll_file << L"]\n";
 		}
+
+		/* Perform runtime function resolve */
+		linker _imp_func_resolver;
+		_imp_func_resolver.link_runtime(binary, dos_hdr, _exported);
+
+		/* Map the exe into mem */
+		std::cout << "0x" << std::hex << exe_section_hdrs[0].virt_addr << " - ";
+		for (const auto& section : exe_section_hdrs) {
+			//Set memory to writable
+			emu.memory.SetPermission(section.virt_addr, section.mem_size, PERM_WRITE);
+
+			//Write in th original file contents 
+			emu.memory.WriteFrom(section.virt_addr, get_range(binary, section.file_off, section.file_size));
+
+			//Write in any paddings with zeros
+			if (section.mem_size > section.file_size) [[likely]] {
+				std::vector<u8> padding(section.mem_size - section.file_size);
+				emu.memory.WriteFrom(section.virt_addr + section.file_size, padding);
+			}
+
+			//Demote permissions to originals
+			emu.memory.SetPermission(section.virt_addr, section.mem_size, section.permission);
+
+			//Update the allocator beyond any sections we load
+			emu.memory.cur_alloc = std::max(
+				emu.memory.cur_alloc,
+				(section.virt_addr + section.mem_size + 0xf) & ~0xf
+			);
+		}
+
+		std::cout << "0x" << std::hex << emu.memory.cur_alloc << " [Program]\n";
 		return _exported;
 	}
 }

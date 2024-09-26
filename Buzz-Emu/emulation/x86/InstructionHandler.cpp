@@ -204,65 +204,11 @@ void Mov_88(BUZE_STANDARD_PARAM) {
 #pragma endregion
 #pragma region Mov (0x89)
 void Mov_89(Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst) {
-	OperandSize opsize = ctx->osize; ModRM mod_rm; set_modrm_byte(emu, ctx, mod_rm); if (!mod_rm.rm.disp_size && !mod_rm.rm.reg_set) return; if (!ctx->p_sib) {
-		if (!mod_rm.rm.is_addr && mod_rm.rm.reg_set) {
-			if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.SetReg<u16>(mod_rm.rm.reg, static_cast<u16>(mod_rm.Reg.val & 0xFFFF));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.SetReg<u32>(mod_rm.rm.reg, static_cast<u32>(mod_rm.Reg.val & 0xFFFFFFFF));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {
-				emu.SetReg<u64>(mod_rm.rm.reg, mod_rm.Reg.val);
-			}
-		}
-		else if (!mod_rm.rm.disp_size) {
-			if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.memory.WriteFrom(static_cast<u16>(mod_rm.rm.reg_val & 0xFFFF), to_byte_vec(static_cast<u16>(mod_rm.Reg.val & 0xFFFF)));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.memory.WriteFrom(static_cast<u32>(mod_rm.rm.reg_val & 0xFFFFFFFF), to_byte_vec(static_cast<u32>(mod_rm.Reg.val & 0xFFFFFFFF)));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {
-				emu.memory.WriteFrom(mod_rm.rm.reg_val, to_byte_vec(mod_rm.Reg.val));
-			}
-		}
-		else if (mod_rm.rm.reg_set && mod_rm.rm.disp_size) {
-			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(2)).value(); if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.memory.WriteFrom(static_cast<u16>(mod_rm.rm.reg_val & 0xFFFF) + disp, to_byte_vec(static_cast<u16>(mod_rm.Reg.val & 0xFFFF)));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.memory.WriteFrom(static_cast<u32>(mod_rm.rm.reg_val & 0xFFFFFFFF) + disp, to_byte_vec(static_cast<u32>(mod_rm.Reg.val & 0xFFFFFFFF)));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {
-				emu.memory.WriteFrom(mod_rm.rm.reg_val + disp, to_byte_vec(mod_rm.Reg.val));
-			}
-		}
-	}
-	else {
-		Sib sib_byte; u64 calc_offset = 0; set_sib_byte(emu, ctx, mod_rm, sib_byte, calc_offset); if (!sib_byte.valid) return; std::cout << "entering sib proccessing...\n"; if (mod_rm.rm.disp_size) {
-			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(3)).value(); if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.memory.WriteFrom(calc_offset + disp, to_byte_vec(static_cast<u16>(mod_rm.Reg.val & 0xFFFF)));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.memory.WriteFrom(calc_offset + disp, to_byte_vec(static_cast<u32>(mod_rm.Reg.val & 0xFFFFFFFF)));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {
-				emu.memory.WriteFrom(calc_offset + disp, to_byte_vec(mod_rm.Reg.val));
-			}
-		}
-		else {
-			if (opsize == OperandSize::X86_Osize_16bit) {
-				emu.memory.WriteFrom(calc_offset, to_byte_vec(static_cast<u16>(mod_rm.Reg.val & 0xFFFF)));
-			}
-			else if (opsize == OperandSize::X86_Osize_32bit) {
-				emu.memory.WriteFrom(calc_offset, to_byte_vec(static_cast<u32>(mod_rm.Reg.val & 0xFFFFFFFF)));
-			}
-			else if (opsize == OperandSize::X86_Osize_64bit && ((ctx->pfx_rex >> 3) & 1)) {
-				emu.memory.WriteFrom(calc_offset, to_byte_vec(mod_rm.Reg.val));
-			}
-		}
-	} return;
+	ModRM modrm;
+	set_modrm_byte(emu, ctx, modrm);
+	def_instruction_op2_MR<decltype(mov_operation),
+		u16, u32, u64,
+		u16, u32, u64>(emu, ctx, inst, mov_operation, modrm, modrm.rm.reg_val, modrm.Reg.val);
 }
 #pragma endregion
 #pragma region Mov (0x8B)

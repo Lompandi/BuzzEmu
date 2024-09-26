@@ -56,6 +56,7 @@ int main()
 
     //set up a stack
     auto base = emu.memory.mem_alloc(3 * 1024).value(); 
+    emu.memory.SetPermission(base, 3 * 1024, PERM_READ | PERM_WRITE);
     std::cout << "Stack: 0x" << std::hex << base << " - " << base + 0x2200 << "\n";
     emu.SetReg<u64>(Register::Rsp, base + 3 * 1024);
 
@@ -82,6 +83,6 @@ int main()
         }
     }*/
 
-    emu.TestRun();
+    emu.Run();
 }
 

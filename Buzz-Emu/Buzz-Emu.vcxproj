@@ -143,7 +143,9 @@
     <ClCompile Include="include\buzzemu\Strings.cpp" />
     <ClCompile Include="pe\ExportHandler.cpp" />
     <ClCompile Include="pe\ImportHandler.cpp" />
+    <ClCompile Include="pe\linker\Linker.cpp" />
     <ClCompile Include="pe\Mapper.cpp" />
+    <ClCompile Include="pe\PeUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\Fs.hpp" />
@@ -174,6 +176,7 @@
     <ClInclude Include="pe\ImportHandler.hpp" />
     <ClInclude Include="pe\linker\Linker.hpp" />
     <ClInclude Include="pe\Mapper.hpp" />
+    <ClInclude Include="pe\PeUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="trash_can\old_instruction_handlers.txt" />

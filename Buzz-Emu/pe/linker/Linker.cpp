@@ -1,16 +1,19 @@
 
-#include "../core/Fs.hpp"
-#include "ImportHandler.hpp"
-#include "../core/Memtypes.hpp"
-#include "../include/buzzemu/Strings.hpp"
-#include "../include/buzzemu/Address.hpp"
+#include "Linker.hpp"
+#include "../../core/Fs.hpp"
+#include "../../emulator/Emulator.hpp"
+#include "../../include/buzzemu/Strings.hpp"
+#include "../../include/buzzemu/Address.hpp"
 
 namespace bzmu::pe {
-	void import_container::set_import_table(PIMAGE_DOS_HEADER dos_hdr) {
+	void linker::link_runtime(
+		std::vector<u8>& binary,
+		PIMAGE_DOS_HEADER dos_hdr, 
+		export_container& _exports) {
 
 		auto nt_header = reinterpret_cast<PIMAGE_NT_HEADERS>(
 			reinterpret_cast<u8*>(dos_hdr) + dos_hdr->e_lfanew
-		);
+			);
 
 		if (nt_header->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
 			if (reinterpret_cast<PIMAGE_NT_HEADERS64>(nt_header)->OptionalHeader.
@@ -20,7 +23,7 @@ namespace bzmu::pe {
 			PIMAGE_IMPORT_DESCRIPTOR import_desc = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(
 				reinterpret_cast<u8*>(dos_hdr) +
 				rva_to_foa(nt_header, reinterpret_cast<PIMAGE_NT_HEADERS64>(nt_header)->OptionalHeader.DataDirectory[1].VirtualAddress).value());
-			
+
 			PIMAGE_THUNK_DATA64 thunk_data64;
 			PIMAGE_IMPORT_BY_NAME import_by_name;
 
@@ -39,55 +42,32 @@ namespace bzmu::pe {
 					reinterpret_cast<u8*>(dos_hdr) +
 					rva_to_foa(nt_header, import_desc->FirstThunk).value());
 
+				size_t thunk_offset = 0;
 				while (thunk_data64->u1.AddressOfData != 0) {
 					import_by_name = reinterpret_cast<PIMAGE_IMPORT_BY_NAME>(
 						reinterpret_cast<u8*>(dos_hdr) +
 						rva_to_foa(nt_header, thunk_data64->u1.AddressOfData).value());
-
-					import_function import_func = {
-						.dll_name = dll_name,
-						.func_name = "",
-						.func_addr = 0
-					};
-
-					if (thunk_data64->u1.AddressOfData & IMAGE_ORDINAL_FLAG64) {	
-						import_func.func_name = "{ORD}: " +
-							std::to_string(thunk_data64->u1.AddressOfData); /*Import via serial number*/
+					//we will currently handle the imports via names, 
+					//TODO: add ordinal number imports handle code 
+					
+					std::wstring func_name = bytes_to_wstring(import_by_name->Name);
+					auto imp_func_runtime_addr = _exports.get_function_address(
+						wstring_to_string(func_name));
+					if (imp_func_runtime_addr) {
+						auto ptr_to_entry = rva_to_foa(nt_header, import_desc->FirstThunk
+							+ thunk_offset).value();
+						*reinterpret_cast<uint64_t*>(binary.data() + ptr_to_entry)
+							= imp_func_runtime_addr;
+						std::cout << "resolving rva: 0x" << std::hex << import_desc->FirstThunk
+							+ thunk_offset << " to -> 0x" << imp_func_runtime_addr << '\n';
 					}
-					else {
-						func_name = bytes_to_wstring(import_by_name->Name);
-						import_func.func_name = wstring_to_string(func_name);
-					}
+					//switch to next thunk
+					thunk_offset += 8;
 					thunk_data64++;
-
-					_imported.push_back(import_func);
 				}
 				import_desc++;
 			}
 		}
-		sync_hash_table();
 		return;
-	}
-
-	result<std::wstring, search_error> import_container::get_dll_by_function(std::string_view func_name) {
-		auto it = _function_to_dll.find(func_name);
-		if (it != _function_to_dll.end())
-			return it->second;
-		return result_error{ search_error::not_found };
-	}
-
-	std::vector<std::string> import_container::get_functions_by_dll(std::wstring_view dll_name) {
-		std::vector<std::string> data;
-		for (const auto& it : _imported) {
-			if (it.dll_name == dll_name)
-				data.push_back(it.func_name);
-		}
-		return data;
-	}
-
-	void import_container::sync_hash_table() {
-		for (const auto& it : _imported) {
-			_function_to_dll[it.func_name] = it.dll_name;
-		}
 	}
 }

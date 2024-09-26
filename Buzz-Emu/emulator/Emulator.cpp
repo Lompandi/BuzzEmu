@@ -96,11 +96,12 @@ VmExit Emulator::Run() {
 		CrashDump(*this);
 
 		auto pc = Reg(Register::Rip);
+		std::cout << "==============================================================\n";
 		std::cout << "[EMU] Executing instruction at 0x" << std::hex << pc;
 		std::vector<u8> inst;
 		//Fetch the current instructions
 		memory.ReadInstruction(lendec, pc, inst, (PERM_READ | PERM_EXEC));
-		std::cout << "opcode size: " << lendec.GetDecoderCtx().opcode_size << "\n";
+		std::cout << "\nopcode size: " << lendec.GetDecoderCtx().opcode_size << "\n";
 		
 		u32 opcode = 0;
 		u8 modrm;
@@ -430,6 +431,7 @@ VmExit Emulator::Run() {
 /*========================================================================*/
 		//Increment the rip to get next instruction
 		debug_instr_count++;
+		std::cout << "==============================================================\n";
 		SetReg<u64>(Register::Rip, pc + inst.size());
 	}
 }

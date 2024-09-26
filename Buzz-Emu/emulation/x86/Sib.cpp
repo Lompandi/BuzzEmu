@@ -61,7 +61,7 @@ void set_sib_byte(Emulator& emu, x86Dcctx* ctx, ModRM& modrm, Sib& sib, u64& cla
 
         // Calculate offset with base register
         clac_offset = (sib.scale * (sib.use_indx ? emu.Reg(sib.index_reg) : 0)) + (sib.use_base ? emu.Reg(sib.base_reg) : 0);
-        std::cout << "Offset calculation: " << clac_offset << std::endl;
+        std::cout << "Offset calculation: 0x" << std::hex << clac_offset << std::endl;
         std::cout << "sib stynax: [r" << (int)sib.base_reg << " + disp" <<  (int)modrm.rm.disp_size << "]\n";
     }
 

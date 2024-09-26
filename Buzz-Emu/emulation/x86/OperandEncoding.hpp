@@ -189,10 +189,10 @@ BZMU_FORCEINLINE void def_instruction_op2_RM(Emulator& emu,
 			execute_instruction_mem(OPtype16{}, OP2type16{}, Op2, disp);
 			break;
 		case OperandSize::X86_Osize_32bit:
-			execute_instruction_mem(OPtype32{}, OP2type16{}, Op2, disp);
+			execute_instruction_mem(OPtype32{}, OP2type32{}, Op2, disp);
 			break;
 		case OperandSize::X86_Osize_64bit:
-			execute_instruction_mem(OPtype64{}, OP2type16{}, Op2, disp);
+			execute_instruction_mem(OPtype64{}, OP2type64{}, Op2, disp);
 			break;
 		default:
 			break;
