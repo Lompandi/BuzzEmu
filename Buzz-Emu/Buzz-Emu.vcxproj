@@ -157,6 +157,10 @@
     <ClInclude Include="emulation\x86\Instructions.hpp" />
     <ClInclude Include="emulation\x86\ModRM.hpp" />
     <ClInclude Include="emulation\x86\OperandEncoding.hpp" />
+    <ClInclude Include="emulation\x86\operand_types\AddressType.hpp" />
+    <ClInclude Include="emulation\x86\operand_types\Immediate.hpp" />
+    <ClInclude Include="emulation\x86\operand_types\OperandTypes.hpp" />
+    <ClInclude Include="emulation\x86\operand_types\RegisterType.hpp" />
     <ClInclude Include="emulation\x86\Register.hpp" />
     <ClInclude Include="emulation\x86\Sib.hpp" />
     <ClInclude Include="emulation\x86\SizeEnum.hpp" />

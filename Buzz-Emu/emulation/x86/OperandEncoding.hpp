@@ -3,8 +3,11 @@
 #include "Sib.hpp"
 #include "ModRM.hpp"
 #include "../../core/Fs.hpp"
+#include "ExecutionHandler.hpp"
 #include "../../core/Memtypes.hpp"
+#include "operand_types/OperandTypes.hpp"
 #include "../../include/buzzemu/Defines.hpp"
+#include "../../include/buzzemu/Callcontext.hpp"
 
 #define GET_L_REG(r) static_cast<u8>(r & 0xFF)
 #define GET_H_REG(r) static_cast<u8>((r >> 8) & 0xFF)

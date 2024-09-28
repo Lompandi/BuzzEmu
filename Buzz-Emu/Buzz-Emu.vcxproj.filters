@@ -155,6 +155,18 @@
     <ClInclude Include="pe\PeUtils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="emulation\x86\operand_types\Immediate.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="emulation\x86\operand_types\AddressType.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="emulation\x86\operand_types\RegisterType.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="emulation\x86\operand_types\OperandTypes.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="trash_can\old_instruction_handlers.txt" />

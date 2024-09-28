@@ -1,6 +1,7 @@
 
 #include <bit>
 #include <iostream>
+#include <chrono>
 
 #include "Emulator.hpp"
 
@@ -60,25 +61,25 @@ void Emulator::SetReg64(Register reg, u64 val) {
 
 void CrashDump(Emulator& emu) {
 	//dump general pourpose registers
-	std::cout << "rax: 0x" << std::hex << emu.Reg(Register::Rax);
-	std::cout << " rcx: 0x" << std::hex << emu.Reg(Register::Rcx) << "\n";
-	std::cout << "rdx: 0x" << std::hex << emu.Reg(Register::Rdx);
-	std::cout << " rbx: 0x" << std::hex << emu.Reg(Register::Rbx) << "\n";
-	std::cout << "rsp: 0x" << std::hex << emu.Reg(Register::Rsp);
-	std::cout << " rbp: 0x" << std::hex << emu.Reg(Register::Rbp) << "\n";
-	std::cout << "rsi: 0x" << std::hex << emu.Reg(Register::Rsi);
-	std::cout << " rdi: 0x" << std::hex << emu.Reg(Register::Rdi) << "\n\n";
+	//std::cout << "rax: 0x" << std::hex << emu.Reg(Register::Rax);
+	//std::cout << " rcx: 0x" << std::hex << emu.Reg(Register::Rcx) << "\n";
+	//std::cout << "rdx: 0x" << std::hex << emu.Reg(Register::Rdx);
+	//std::cout << " rbx: 0x" << std::hex << emu.Reg(Register::Rbx) << "\n";
+	//std::cout << "rsp: 0x" << std::hex << emu.Reg(Register::Rsp);
+	//std::cout << " rbp: 0x" << std::hex << emu.Reg(Register::Rbp) << "\n";
+	//std::cout << "rsi: 0x" << std::hex << emu.Reg(Register::Rsi);
+	//std::cout << " rdi: 0x" << std::hex << emu.Reg(Register::Rdi) << "\n\n";
 
 	//dump Cpu flags
-	std::cout << "cf: " << std::hex <<emu.flags.CF; // Carry Flag
-	std::cout << " pf: " << std::hex <<emu.flags.PF; // Parity Flag
-	std::cout << " af: " << std::hex <<emu.flags.AF; // Auxiliary Carry Flag
-	std::cout << " zf: " << std::hex <<emu.flags.ZF << "\n"; // Zero Flag
-	std::cout << "sf: " << std::hex <<emu.flags.SF; // Sign Flag
-	std::cout << " tf: " << std::hex <<emu.flags.TF; // Trap Flag
-	std::cout << " if: " << std::hex <<emu.flags.IF; // Interrupt Enable Flag
-	std::cout << " df: " << std::hex <<emu.flags.DF << "\n"; // Direction Flag
-	std::cout << "of: " << std::hex <<emu.flags.OF << "\n\n"; // Overflow Flag
+	//std::cout << "cf: " << std::hex <<emu.flags.CF; // Carry Flag
+	//std::cout << " pf: " << std::hex <<emu.flags.PF; // Parity Flag
+	//std::cout << " af: " << std::hex <<emu.flags.AF; // Auxiliary Carry Flag
+	//std::cout << " zf: " << std::hex <<emu.flags.ZF << "\n"; // Zero Flag
+	//std::cout << "sf: " << std::hex <<emu.flags.SF; // Sign Flag
+	//std::cout << " tf: " << std::hex <<emu.flags.TF; // Trap Flag
+	//std::cout << " if: " << std::hex <<emu.flags.IF; // Interrupt Enable Flag
+	//std::cout << " df: " << std::hex <<emu.flags.DF << "\n"; // Direction Flag
+	//std::cout << "of: " << std::hex <<emu.flags.OF << "\n\n"; // Overflow Flag
 }
 
 void opcode_cpy(uint8_t* opcode, const uint8_t* src, size_t size) {
@@ -94,22 +95,23 @@ VmExit Emulator::Run() {
 
 	while(true) {
 		CrashDump(*this);
+		auto start = std::chrono::high_resolution_clock::now();
 
 		auto pc = Reg(Register::Rip);
-		std::cout << "==============================================================\n";
-		std::cout << "[EMU] Executing instruction at 0x" << std::hex << pc;
+		//std::cout << "==============================================================\n";
+		//std::cout << "[EMU] Executing instruction at 0x" << std::hex << pc;
 		std::vector<u8> inst;
 		//Fetch the current instructions
 		memory.ReadInstruction(lendec, pc, inst, (PERM_READ | PERM_EXEC));
-		std::cout << "\nopcode size: " << lendec.GetDecoderCtx().opcode_size << "\n";
+		//std::cout << "\nopcode size: " << lendec.GetDecoderCtx().opcode_size << "\n";
 		
 		u32 opcode = 0;
 		u8 modrm;
 		if (lendec.GetDecoderCtx().pfx_p_rex)
-			std::cout << " prefixed REX";
+			//std::cout << " prefixed REX";
 		
 		if (lendec.GetDecoderCtx().p_sib)
-			std::cout << " have SIB";
+			//std::cout << " have SIB";
 
 		/*std::copy(inst.begin() + lendec.GetDecoderCtx().pos_opcode,
 			inst.begin() + lendec.GetDecoderCtx().pos_opcode + lendec.GetDecoderCtx().opcode_size, 
@@ -119,7 +121,7 @@ VmExit Emulator::Run() {
 			inst.data() + lendec.GetDecoderCtx().pos_opcode,
 			lendec.GetDecoderCtx().opcode_size);
 
-		std::cout << " with opcode 0x" << std::hex << opcode << "\n";
+		//std::cout << " with opcode 0x" << std::hex << opcode << "\n";
 
 		//Start to emulate instructions
 		switch (opcode) {
@@ -274,8 +276,8 @@ VmExit Emulator::Run() {
 		case Instruction::JL_7C:
 			//Signed-extended offset
 			pc = Reg(Register::Rip) + (this->flags.SF != this->flags.OF ? read_from_vec<s8>(inst, 1) : 0);
-			std::cout << "JL Rel8: 0x" << std::hex << (int)read_from_vec<s8>(inst, 1) << "\n";
-			std::cout << "Pc after JL: 0x" << std::hex << pc << "\n";
+			//std::cout << "JL Rel8: 0x" << std::hex << (int)read_from_vec<s8>(inst, 1) << "\n";
+			//std::cout << "Pc after JL: 0x" << std::hex << pc << "\n";
 			break;
 		case Instruction::JLE_7E:
 			pc = Reg(Register::Rip) + 
@@ -386,7 +388,7 @@ VmExit Emulator::Run() {
 			Mov_B8_BF(instruction_param);
 			break;
 		case Instruction::RET_C3:
-			std::cout << "Returning from procedure...\n";
+			//std::cout << "Returning from procedure...\n";
 			Ret_C3(*this, &lendec.GetDecoderCtx(), inst, pc);
 			break;
 		case Instruction::MOV_C7:
@@ -394,7 +396,7 @@ VmExit Emulator::Run() {
 			break;
 /*============================ Call procedure (0xE8) ===========================*/
 		case Instruction::CALL_E8:
-			std::cout << "Calling functions\n";
+			//std::cout << "Calling functions\n";
 			Call_E8(*this, &lendec.GetDecoderCtx(), inst, pc);
 			break;
 /*======================= Jump short        ====================================*/
@@ -423,16 +425,19 @@ VmExit Emulator::Run() {
 			Movzx_0FB6(instruction_param);
 			break;
 		default:
-			std::cout << "\n[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
-			std::cout << "[EMU] " << std::dec << debug_instr_count << " instructions executed before crashing.\n\n";
+			//std::cout << "\n[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+			//std::cout << "[EMU] " << std::dec << debug_instr_count << " instructions executed before crashing.\n\n";
 			CrashDump(*this);
 			break;
 		}
 /*========================================================================*/
 		//Increment the rip to get next instruction
 		debug_instr_count++;
-		std::cout << "==============================================================\n";
+		//std::cout << "==============================================================\n";
 		SetReg<u64>(Register::Rip, pc + inst.size());
+		auto end = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+		std::cout << "execution tooks: " << duration.count() << " microseconds\n";
 	}
 }
 
@@ -452,7 +457,7 @@ void Emulator::TestRun() {
 		std::vector<u8> inst;
 		// Fetch the current instructions
 		memory.ReadInstruction(lendec, pc, inst, (PERM_READ | PERM_EXEC));
-		//std::cout << "opcode size: " << (int)(lendec.GetDecoderCtx().opcode_size) << "\n";
+		////std::cout << "opcode size: " << (int)(lendec.GetDecoderCtx().opcode_size) << "\n";
 
 
 		// Extract context information
@@ -462,7 +467,7 @@ void Emulator::TestRun() {
 		// Copy the opcode from the instruction vector
 		opcode_cpy((u8*)&opcode, inst.data() + pos_opcode, opcode_size);
 
-		std::cout << "0x" <<std::hex << pc << " with opcode 0x" << std::hex << opcode << "\n";
+		//std::cout << "0x" <<std::hex << pc << " with opcode 0x" << std::hex << opcode << "\n";
 
 		//Start to emulate instructions
 		switch (opcode) {
@@ -568,7 +573,7 @@ void Emulator::TestRun() {
 			switch (MODRM_REG(lendec.GetDecoderCtx().modrm)) {
 			case 0b000:
 				CrashDump(*this);
-				std::cout << "calulating add...\n";
+				//std::cout << "calulating add...\n";
 				Add_83(instruction_param);
 				CrashDump(*this);
 				break;
@@ -584,7 +589,7 @@ void Emulator::TestRun() {
 			case 0x07:
 				break;
 			default:
-				std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+				//std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
 				break;
 			}
 			break;
@@ -655,15 +660,15 @@ void Emulator::TestRun() {
 			case 0b010:
 				break;
 			default:
-				std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+				//std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
 				break;
 			}
 			break;
 		case Instruction::MOVZX_0FB6:
 			break;
 		default:
-			std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
-			//std::cout << "[EMU] " << std::dec << debug_instr_count << " instructions executed before crashing.\n\n";
+			//std::cout << "[EMU] Error at 0x" << std::hex << pc << ", unknown opcode 0x" << std::hex << opcode << "\n";
+			////std::cout << "[EMU] " << std::dec << debug_instr_count << " instructions executed before crashing.\n\n";
 			//CrashDump(*this);
 			break;
 		}
