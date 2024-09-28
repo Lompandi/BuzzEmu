@@ -5,6 +5,7 @@
 #include <vector>
 #include <type_traits>
 #include <optional>
+#include <limits>
 
 #include "../core/Memtypes.hpp"
 
@@ -79,6 +80,13 @@ std::optional<T> read_disp_from_inst(const std::vector<uint8_t>& vec, size_t siz
 template <typename T>
 T CastFromVec(const std::vector<uint8_t>& vec, size_t offset) {
     return *reinterpret_cast<const T*>(vec.data() + offset);
+}
+
+template <typename T> requires std::is_integral_v<T>
+std::optional<T> checked_add(const T x1, const T x2) {
+    if (((x1 / 2) + (x2 / 2)) > (std::numeric_limits<T>::max() / 2)) //will overflowed
+        return std::nullopt;
+    return x1 + x2;
 }
 
 uint64_t ReadFromU64(uint64_t value, uint8_t size);

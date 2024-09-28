@@ -150,6 +150,7 @@
   <ItemGroup>
     <ClInclude Include="core\Fs.hpp" />
     <ClInclude Include="core\Memtypes.hpp" />
+    <ClInclude Include="emulation\x86\ExecutionDeclare.hpp" />
     <ClInclude Include="emulation\x86\Flags.hpp" />
     <ClInclude Include="emulation\x86\InstructionHandler.hpp" />
     <ClInclude Include="emulation\x86\DecodeContext.hpp" />

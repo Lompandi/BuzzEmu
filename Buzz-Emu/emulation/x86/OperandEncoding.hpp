@@ -3,11 +3,11 @@
 #include "Sib.hpp"
 #include "ModRM.hpp"
 #include "../../core/Fs.hpp"
-#include "ExecutionHandler.hpp"
 #include "../../core/Memtypes.hpp"
 #include "operand_types/OperandTypes.hpp"
 #include "../../include/buzzemu/Defines.hpp"
 #include "../../include/buzzemu/Callcontext.hpp"
+#include "ExecutionDeclare.hpp"
 
 #define GET_L_REG(r) static_cast<u8>(r & 0xFF)
 #define GET_H_REG(r) static_cast<u8>((r >> 8) & 0xFF)
@@ -861,6 +861,126 @@ void def_instruction_op1_M(Emulator& emu,
 			default:
 				break;
 			}
+		}
+	}
+	return;
+}
+
+//========================test========================
+template <typename FuncType,
+	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
+	std::integral OP2type16, std::integral OP2type32, std::integral OP2type64,
+	typename FuncRetType = u64,
+	AddressMode amod = AddressMode::Access,
+	typename... ExtraArgs>
+void def_instruction_op2(
+	Emulator& emu,
+	x86Dcctx* ctx,
+	const std::vector<u8>& inst,
+	FuncType instr_emu_func,
+	ModRM& mod_rm,
+	operand_type op1,
+	operand_type op2,
+	ExtraArgs... extra_args) {
+
+	auto execute_instruction_reg = [&](auto OperandType, auto Operand2Type) {
+		if constexpr (std::is_void_v<FuncRetType>) {
+			call_function(
+				instr_emu_func,
+				static_cast<decltype(OperandType)>(op1),
+				static_cast<decltype(OperandType)>(static_cast<decltype(Operand2Type)>(op2)),
+				std::forward<ExtraArgs>(extra_args)...);
+		}
+		else {
+			emu.SetReg<decltype(OperandType)>(mod_rm.Reg.reg,
+				call_function(
+					instr_emu_func,
+					static_cast<decltype(OperandType)>(op1),
+					static_cast<decltype(OperandType)>(static_cast<decltype(Operand2Type)>(op2)),
+					std::forward<ExtraArgs>(extra_args)...
+				), mod_rm.Reg.h_l);
+		}
+		};
+	auto execute_instruction_mem = [&](auto OperandType, auto Operand2Type, auto Op2, auto disp) {
+		u64 _Op2 = 0;
+		if constexpr (amod == AddressMode::Access)
+			_Op2 = emu.memory.Read<decltype(Operand2Type)>(static_cast<decltype(Operand2Type)>(Op2) + disp).value();
+		else
+			_Op2 = static_cast<decltype(Operand2Type)>(Op2) + disp;
+
+		if constexpr (std::is_void_v<FuncRetType>) {
+			call_function(
+				instr_emu_func,
+				static_cast<decltype(OperandType)>(op1),
+				static_cast<decltype(OperandType)>(_Op2),
+				extra_args...);
+		}
+		else {
+			emu.SetReg<decltype(OperandType)>(mod_rm.Reg.reg, call_function(
+				instr_emu_func,
+				static_cast<decltype(OperandType)>(op1),
+				static_cast<decltype(OperandType)>(_Op2),
+				extra_args...), mod_rm.Reg.h_l);
+		}
+		};
+	auto exec_inst_mem = [&](auto Op2, auto disp) {
+		switch (GET_OPSIZE_ENUM(ctx->osize)) {
+		case OperandSize::X86_Osize_16bit:
+			execute_instruction_mem(OPtype16{}, OP2type16{}, Op2, disp);
+			break;
+		case OperandSize::X86_Osize_32bit:
+			execute_instruction_mem(OPtype32{}, OP2type32{}, Op2, disp);
+			break;
+		case OperandSize::X86_Osize_64bit:
+			execute_instruction_mem(OPtype64{}, OP2type64{}, Op2, disp);
+			break;
+		default:
+			break;
+		}
+		};
+
+	if (!mod_rm.rm.disp_size && !mod_rm.rm.reg_set) return;
+	if (!ctx->p_sib) {
+		if (!mod_rm.rm.is_addr && mod_rm.rm.reg_set) {
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				execute_instruction_reg(OPtype16{}, OP2type16{});
+				break;
+			case OperandSize::X86_Osize_32bit:
+				execute_instruction_reg(OPtype32{}, OP2type32{});
+				break;
+			case OperandSize::X86_Osize_64bit:
+				execute_instruction_reg(OPtype64{}, OP2type64{});
+				break;
+			default:
+				break;
+			}
+		}
+		else if (!mod_rm.rm.disp_size) {
+			exec_inst_mem(op2, 0);
+		}
+		else if (mod_rm.rm.reg_set && mod_rm.rm.disp_size) {
+			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(2)).value();
+			exec_inst_mem(op2, disp);
+		}
+		else if (mod_rm.rm.disp_size) {
+			s64 disp = emu.Reg(Register::Rip) + read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(2)).value() + inst.size();
+			exec_inst_mem(0, disp);
+		}
+	}																																																			\
+	else {
+		Sib sib_byte;
+		u64 calc_offset = 0;
+		set_sib_byte(emu, ctx, mod_rm, sib_byte, calc_offset);
+		if (!sib_byte.valid)
+			return;
+
+		if (mod_rm.rm.disp_size) {
+			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(3)).value();
+			exec_inst_mem(0, calc_offset + disp);
+		}																																																					   \
+		else {
+			exec_inst_mem(0, calc_offset);
 		}
 	}
 	return;

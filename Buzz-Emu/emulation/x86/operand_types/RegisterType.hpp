@@ -2,7 +2,9 @@
 
 #include "../Register.hpp"
 
-struct RegisterValue {
+using RegisterValue = Register;
+
+/*struct RegisterValue {
 public:
     using ValueType = std::variant<s8, u8, s16, u16, s32, u32, s64, u64>;
 
@@ -25,5 +27,5 @@ public:
 
 private:
     ValueType value_;
-};
+};*/
 

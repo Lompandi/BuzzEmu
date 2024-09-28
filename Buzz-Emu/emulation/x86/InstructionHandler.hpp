@@ -7,6 +7,14 @@
 #define BUZE_STANDARD_PARAM Emulator& emu, x86Dcctx* ctx, const std::vector<u8>& inst
 
 #define push(expr) emu.memory.Write(emu.Reg(Register::Rsp) - sizeof(expr), ##expr); emu.SetReg64(Register::Rsp, emu.Reg(Register::Rsp) - sizeof(expr))
+
+#define pop(emu) _pop(##emu)
+
+BZMU_FORCEINLINE u64 _pop(Emulator& emu) {
+	auto pop_val = emu.memory.Read<u64>(emu.Reg(Register::Rsp)).value();
+	emu.SetReg<u64>(Register::Rsp, emu.Reg(Register::Rsp) + sizeof(u64));
+	return pop_val;
+}
 //if memonic collides, the number will be its opcode
 // 
 // TODO Instructions: 

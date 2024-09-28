@@ -1,7 +1,7 @@
 
 #include <iostream>
-
 #include <chrono>
+#include <variant>
 
 #include "emulator/Emulator.hpp"
 #include "emulation/x86/InstructionHandler.hpp"
@@ -9,10 +9,15 @@
 #include "pe/ImportHandler.hpp"
 #include "pe/ExportHandler.hpp"
 
+u64 test_func(u64 u1, u64 u2) {
+    return u1;
+}
+
 int main()
 {
-    //NOT FINISHED¡@YET: https://youtu.be/iM3s8-umRO0?t=29219
+    //NOT FINISHED¡@YET: https://youtu.be/iM3s8-umRO0?t=29354
     Emulator emu(32 * 1024 * 1024);
+    
     //Load the application into the emulator
     Section text_section = {
         .file_off = 0x00000400,
@@ -70,18 +75,45 @@ int main()
     push(argv);   // Push argv (pointer to the argument vector)
     push(1ull);   // Push argc (number of arguments; in this case, 1 argument)
 
-    /*while (true) {
+    while (true) {
         auto num = emu.Run();
         switch (num) {
             //Syscall processing, which is not going to be emulated in guest 
+            //this will be handle if i have time
         case VmExit::Syscall:
             switch (emu.Reg(Register::Rax)) {
+            case 0x07: //NtDeviceIoControlFile
+                break;
+            case 0x08: { //NtWriteFile
+                auto handle_ptr          = emu.Reg(Register::Rcx);
+                auto event_ptr           = emu.Reg(Register::Rdi);
+                auto apc_runtime_ref     = emu.Reg(Register::R8);
+                auto apc_ctx_ptr         = emu.Reg(Register::R9);
+                auto io_status_block_ref = emu.Reg(Register::R10);
+                p0 buf_ptr = reinterpret_cast<p0>(pop(emu));
+                u64  len                 = pop(emu);
+                auto byte_offset         = pop(emu);
+                p64 key = reinterpret_cast<p64>(pop(emu));
+
+                for (auto i = 0; i < max_inst_length; ++i) {
+                    auto current_buf = reinterpret_cast<p64>(buf_ptr)[i];
+                    //we will handle only for writing memory case now
+                    auto ptr = reinterpret_cast<p0>(checked_add(reinterpret_cast<u64>(buf_ptr)
+                        , byte_offset).value());
+
+                    if (!ptr) {
+                        num = VmExit::SyscallIntegerOverflow;
+                        break;
+                    }
+                }
+                break;
+            }
             case 0x2C: //NtTerminateProcess
                 //exit
                 break;
             }
         }
-    }*/
+    }
 
     emu.Run();
 }
