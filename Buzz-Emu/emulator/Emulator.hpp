@@ -28,12 +28,12 @@ public:
 	/*
 	Load a file into th emulators address space using the sections as described
 	*/
-	bool LoadExecutable(const std::string& filename, const std::vector<Section>& sections);
+	bool LoadExecutable(const std::string& filename /*,const std::vector<Section>& sections*/);
 
 	/*
 	Run the machine
 	*/
-	VmExit Run();
+	VmExitResult Run();
 	void TestRun();
 
 	/*

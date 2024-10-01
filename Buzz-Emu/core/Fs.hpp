@@ -1,5 +1,7 @@
 #pragma once
 
+#undef max
+
 #include <span>
 #include <string>
 #include <vector>
@@ -80,6 +82,11 @@ std::optional<T> read_disp_from_inst(const std::vector<uint8_t>& vec, size_t siz
 template <typename T>
 T CastFromVec(const std::vector<uint8_t>& vec, size_t offset) {
     return *reinterpret_cast<const T*>(vec.data() + offset);
+}
+
+template <typename Tret, typename Tx>
+std::optional<Tret> wrap_around(std::optional<Tx> val) {
+    return val.has_value() ? std::optional(reinterpret_cast<Tret>(val.value())) : std::nullopt;
 }
 
 template <typename T> requires std::is_integral_v<T>

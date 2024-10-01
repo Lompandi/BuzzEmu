@@ -6,6 +6,7 @@
 #include "Block.hpp"
 #include "Permission.hpp"
 #include "VirtualAddr.hpp"
+#include "../emulator/VmExit.hpp"
 #include "../emulation/x86/Decoder.hpp"
 #include "../include/buzzemu/Results.hpp"
 
@@ -38,31 +39,42 @@ struct Mmu {
     [[nodiscard]] bzmu::result<VirtualAddr, memalloc_error> mem_alloc(size_t size);
     void SetPermission(VirtualAddr addr, size_t size, Permission perm);
 
-    void WriteFrom(VirtualAddr addr, const std::vector<u8>& buf);
-    void ReadInto(VirtualAddr addr, std::vector<u8>& buf);
-    void ReadIntoPerm(VirtualAddr addr, std::vector<u8>& buf, Permission expected_perm);
+    bzmu::result<int, VmExitResult> WriteFrom(VirtualAddr addr, const std::vector<u8>& buf);
+    bzmu::result<int, VmExitResult> ReadInto(VirtualAddr addr, std::vector<u8>& buf);
+    bzmu::result<int, VmExitResult> ReadIntoPerm(VirtualAddr addr, std::vector<u8>& buf, Permission expected_perm);
     void ReadInstruction(Ldasm& lendec, VirtualAddr addr, std::vector<u8>& buf, Permission exp_perm);
 
-    template<typename T> requires std::is_trivially_copyable_v<T>
-    std::optional<T> ReadPerm(VirtualAddr addr, Permission exp_perm) {
-        T tmp{};
+    template<typename T>
+        requires std::is_trivially_copyable_v<T>
+    bzmu::result<T, VmExitResult> ReadPerm(VirtualAddr addr, Permission exp_perm) {
         std::vector<u8> buf(sizeof(T));
-        ReadIntoPerm(addr, buf, exp_perm);
+        auto result = ReadIntoPerm(addr, buf, exp_perm);
+
+        if (!result.has_value())
+            return bzmu::result_error{ result.error() };
+        T tmp{};
         std::memcpy(&tmp, buf.data(), sizeof(T));
         return tmp;
     }
 
     template<typename T> requires std::is_trivially_copyable_v<T>
-    std::optional<T> Read(const VirtualAddr& addr) {
+    bzmu::result<T, VmExitResult> Read(const VirtualAddr& addr) {
         return ReadPerm<T>(addr, PERM_READ);
     }
 
     template<typename T> requires std::is_trivially_copyable_v<T>
-    void Write(VirtualAddr addr, T val) {
+    bzmu::result<int, VmExitResult> Write(VirtualAddr addr, T val) {
         std::vector<u8> buf(sizeof(T));
         std::memcpy(buf.data(), &val, sizeof(T));
-        WriteFrom(addr, buf);
+        return WriteFrom(addr, buf);
     }
+
+    /*
+    Return a slice to memory at `addr` for `size` bytes that 
+    has been vaidated to match all `exp_perms`
+    */
+    bzmu::result<std::vector<u8>, VmExitResult>
+    peek_perms(VirtualAddr addr, size_t size, Permission exp_perms);
 
     /*
     Restores the memory back to the original state

@@ -166,8 +166,12 @@ BZMU_FORCEINLINE void def_instruction_op2_RM(Emulator& emu,
 	};
 	auto execute_instruction_mem = [&](auto OperandType, auto Operand2Type, auto Op2, auto disp) {
 		u64 _Op2 = 0;
-		if constexpr (amod == AddressMode::Access)
-			_Op2 = emu.memory.Read<decltype(Operand2Type)>(static_cast<decltype(Operand2Type)>(Op2) + disp).value();
+		if constexpr (amod == AddressMode::Access) {
+			auto _Op2_res = emu.memory.Read<decltype(Operand2Type)>(static_cast<decltype(Operand2Type)>(Op2) + disp);
+			if (!_Op2_res.has_value())
+				return;
+			_Op2 = _Op2_res.value();
+		}
 		else
 			_Op2 = static_cast<decltype(Operand2Type)>(Op2) + disp;
 
@@ -290,8 +294,12 @@ BZMU_FORCEINLINE void def_instruction_op2_MI(
 
 	auto execute_instruction_mem = [&](auto OperandType, auto ImmType, auto Op1, auto disp) {
 		u64 _Op1 = 0;
-		if constexpr (amod == AddressMode::Access)
-			_Op1 = emu.memory.Read<decltype(OperandType)>(static_cast<decltype(OperandType)>(Op1) + disp).value();
+		if constexpr (amod == AddressMode::Access) {
+			auto _Op1_res = emu.memory.Read<decltype(OperandType)>(static_cast<decltype(OperandType)>(Op1) + disp);
+			if (!_Op1_res.has_value())
+				return;
+			_Op1 = _Op1_res.value();
+		}
 		else
 			_Op1 = static_cast<decltype(OperandType)>(Op1) + disp;
 
@@ -422,7 +430,7 @@ void def_instruction_op2_I(Emulator& emu,
 }
 
 
-template <typename FuncType,
+/*template <typename FuncType,
 	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
 	std::integral OP2type16, std::integral OP2type32, std::integral OP2type64,
 	typename... ExtraArgs>
@@ -652,7 +660,7 @@ void def_instruction_op2_MR(Emulator& emu,
 		}
 	}
 	return;
-}
+}*/
 
 template <typename FuncType,
 	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
@@ -984,4 +992,243 @@ void def_instruction_op2(
 		}
 	}
 	return;
+}
+
+template <typename FuncType,
+	std::integral OPtype16, std::integral OPtype32, std::integral OPtype64,
+	std::integral OP2type16, std::integral OP2type32, std::integral OP2type64,
+	typename... ExtraArgs>
+bzmu::result<int, VmExitResult> def_instruction_op2_MR(Emulator& emu,
+	x86Dcctx* ctx,
+	const std::vector<u8>& inst,
+	FuncType instr_emu_func,
+	ModRM& mod_rm,
+	u64 op1,
+	u64 op2,
+	ExtraArgs... extra_args)
+{
+	if (!mod_rm.rm.disp_size && !mod_rm.rm.reg_set)
+		return -1; //no crit error, skip
+
+	if (!ctx->p_sib) {
+		if (!mod_rm.rm.is_addr && mod_rm.rm.reg_set) {
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				emu.SetReg<OPtype16>(mod_rm.rm.reg, call_function(
+					instr_emu_func,
+					static_cast<OPtype16>(op1),
+					static_cast<OPtype16>(static_cast<OP2type16>(op2)),
+					extra_args...
+				), mod_rm.rm.h_l);
+				break;
+			case OperandSize::X86_Osize_32bit:
+				emu.SetReg<OPtype64>(mod_rm.rm.reg, call_function(
+					instr_emu_func,
+					static_cast<OPtype32>(op1),
+					static_cast<OPtype32>(static_cast<OP2type32>(op2)),
+					extra_args...
+				), mod_rm.rm.h_l);
+				break;
+
+			case OperandSize::X86_Osize_64bit:
+				emu.SetReg<OPtype64>(mod_rm.rm.reg, call_function(
+					instr_emu_func,
+					static_cast<OPtype64>(op1),
+					static_cast<OPtype64>(static_cast<OP2type64>(op2)),
+					extra_args...
+				), mod_rm.rm.h_l);
+				break;
+			default:
+				break;
+			}
+		}
+		else if (!mod_rm.rm.disp_size) {
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit: {
+				auto mem_data = emu.memory.Read<OPtype16>(static_cast<OPtype16>(op1));
+				if (!mem_data.has_value())
+					return bzmu::result_error{ mem_data.error() };
+				emu.memory.WriteFrom(static_cast<OPtype16>(mod_rm.rm.reg_val),
+					to_byte_vec(call_function(
+						instr_emu_func,
+						mem_data.value(),
+						static_cast<OPtype16>(static_cast<OP2type16>(op2)),
+						extra_args...
+					)));
+				break;
+			}
+			case OperandSize::X86_Osize_32bit: {
+				auto mem_data = emu.memory.Read<OPtype32>(static_cast<OPtype32>(op1));
+				if (!mem_data.has_value())
+					return bzmu::result_error{ mem_data.error() };
+				emu.memory.WriteFrom(static_cast<OPtype32>(mod_rm.rm.reg_val),
+					to_byte_vec(call_function(
+						instr_emu_func,
+						mem_data.value(),
+						static_cast<OPtype32>(static_cast<OP2type32>(op2)),
+						extra_args...
+					)));
+				break;
+			}
+			case OperandSize::X86_Osize_64bit:
+				emu.memory.WriteFrom(mod_rm.rm.reg_val, to_byte_vec(call_function(
+					instr_emu_func,
+					emu.memory.Read<OPtype64>(static_cast<OPtype64>(op1)).value(),
+					static_cast<OPtype64>(static_cast<OP2type64>(op2)),
+					extra_args...
+				)));
+				break;
+			default:
+				break;
+			}
+		}
+		else if (mod_rm.rm.reg_set && mod_rm.rm.disp_size) {
+			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(2)).value();								\
+
+				switch (GET_OPSIZE_ENUM(ctx->osize)) {
+				case OperandSize::X86_Osize_16bit:
+					emu.memory.WriteFrom(static_cast<OPtype16>(mod_rm.rm.reg_val) + disp,
+						to_byte_vec(call_function(
+							instr_emu_func,
+							emu.memory.Read<OPtype16>(static_cast<OPtype16>(op1) + disp).value(),
+							static_cast<OPtype16>(static_cast<OP2type16>(op2)),
+							extra_args...
+						)));
+					break;
+				case OperandSize::X86_Osize_32bit:
+					emu.memory.WriteFrom(static_cast<OPtype32>(mod_rm.rm.reg_val) + disp,
+						to_byte_vec(call_function(
+							instr_emu_func,
+							emu.memory.Read<OPtype32>(static_cast<OPtype32>(op1) + disp).value(),
+							static_cast<OPtype32>(static_cast<OP2type32>(op2)),
+							extra_args...
+						)));
+					break;
+				case OperandSize::X86_Osize_64bit:
+					emu.memory.WriteFrom(static_cast<OPtype64>(mod_rm.rm.reg_val) + disp,
+						to_byte_vec(call_function(
+							instr_emu_func,
+							emu.memory.Read<OPtype64>(static_cast<OPtype64>(op1) + disp).value(),
+							static_cast<OPtype64>(static_cast<OP2type64>(op2)),
+							extra_args...
+						)));
+					break;
+				default:
+					break;
+				}
+		}
+		else if (mod_rm.rm.disp_size) {
+			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(2)).value();								\
+
+				switch (GET_OPSIZE_ENUM(ctx->osize)) {
+				case OperandSize::X86_Osize_16bit:
+					emu.memory.WriteFrom(disp,
+						to_byte_vec(call_function(
+							instr_emu_func,
+							emu.memory.Read<OPtype16>(disp).value(),
+							static_cast<OPtype16>(static_cast<OP2type16>(op2)),
+							extra_args...
+						)));
+					break;
+				case OperandSize::X86_Osize_32bit:
+					emu.memory.WriteFrom(disp,
+						to_byte_vec(call_function(
+							instr_emu_func,
+							emu.memory.Read<OPtype32>(disp).value(),
+							static_cast<OPtype32>(static_cast<OP2type32>(op2)),
+							extra_args...
+						)));
+					break;
+				case OperandSize::X86_Osize_64bit:
+					emu.memory.WriteFrom(disp,
+						to_byte_vec(call_function(
+							instr_emu_func,
+							emu.memory.Read<OPtype64>(disp).value(),
+							static_cast<OPtype64>(static_cast<OP2type64>(op2)),
+							extra_args...
+						)));
+					break;
+				default:
+					break;
+				}
+		}
+	}																										\
+	else {
+		Sib sib_byte;
+		u64 calc_offset = 0;
+		set_sib_byte(emu, ctx, mod_rm, sib_byte, calc_offset);
+
+		if (!sib_byte.valid)
+			return -1;
+
+		if (mod_rm.rm.disp_size) {
+			s64 disp = read_disp_from_inst<s64>(inst, mod_rm.rm.disp_size, INSTR_POS(3)).value();
+
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				emu.memory.WriteFrom(calc_offset + disp,
+					to_byte_vec(call_function(
+						instr_emu_func,
+						emu.memory.Read<OPtype16>(calc_offset + disp).value(),
+						static_cast<OPtype16>(static_cast<OP2type16>(op2)),
+						extra_args...
+					)));
+				break;
+			case OperandSize::X86_Osize_32bit:
+				emu.memory.WriteFrom(calc_offset + disp,
+					to_byte_vec(call_function(
+						instr_emu_func,
+						emu.memory.Read<OPtype32>(calc_offset + disp).value(),
+						static_cast<OPtype32>(static_cast<OP2type32>(op2)),
+						extra_args...
+					)));
+				break;
+			case OperandSize::X86_Osize_64bit:
+				emu.memory.WriteFrom(calc_offset + disp,
+					to_byte_vec(call_function(
+						instr_emu_func,
+						emu.memory.Read<OPtype64>(calc_offset + disp).value(),
+						static_cast<OPtype64>(static_cast<OP2type64>(op2)),
+						extra_args...
+					)));
+				break;
+			default:
+				break;
+			}
+		}
+		else {
+			switch (GET_OPSIZE_ENUM(ctx->osize)) {
+			case OperandSize::X86_Osize_16bit:
+				emu.memory.WriteFrom(calc_offset,
+					to_byte_vec(call_function(
+						instr_emu_func,
+						emu.memory.Read<OPtype16>(calc_offset).value(),
+						static_cast<OPtype16>(static_cast<OP2type16>(op2)),
+						extra_args...
+					)));
+				break;
+			case OperandSize::X86_Osize_32bit:
+				emu.memory.WriteFrom(calc_offset,
+					to_byte_vec(call_function(
+						instr_emu_func,
+						emu.memory.Read<OPtype32>(calc_offset).value(),
+						static_cast<OPtype32>(static_cast<OP2type32>(op2)),
+						extra_args...
+					)));
+				break;
+			case OperandSize::X86_Osize_64bit:
+				emu.memory.WriteFrom(calc_offset,
+					to_byte_vec(call_function(
+						instr_emu_func,
+						emu.memory.Read<OPtype64>(calc_offset).value(),
+						static_cast<OPtype64>(static_cast<OP2type64>(op2)),
+						extra_args...
+					)));
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	return 0;
 }

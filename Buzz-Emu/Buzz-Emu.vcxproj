@@ -138,6 +138,7 @@
     <ClCompile Include="emulation\x86\Register.cpp" />
     <ClCompile Include="emulation\x86\Sib.cpp" />
     <ClCompile Include="emulator\Emulator.cpp" />
+    <ClCompile Include="emulator\Syscalls.cpp" />
     <ClCompile Include="include\buzzemu\Address.cpp" />
     <ClCompile Include="memory\Mmu.cpp" />
     <ClCompile Include="include\buzzemu\Strings.cpp" />
@@ -166,6 +167,7 @@
     <ClInclude Include="emulation\x86\Sib.hpp" />
     <ClInclude Include="emulation\x86\SizeEnum.hpp" />
     <ClInclude Include="emulator\Emulator.hpp" />
+    <ClInclude Include="emulator\Syscalls.hpp" />
     <ClInclude Include="emulator\VmExit.hpp" />
     <ClInclude Include="include\buzzemu\Address.hpp" />
     <ClInclude Include="include\buzzemu\Callcontext.hpp" />

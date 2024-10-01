@@ -66,6 +66,9 @@
     <ClCompile Include="pe\PeUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="emulator\Syscalls.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="memory\Mmu.hpp">
@@ -168,6 +171,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="emulation\x86\ExecutionDeclare.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="emulator\Syscalls.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

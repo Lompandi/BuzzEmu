@@ -2,6 +2,7 @@
 #include <stdexcept>
 
 #include "Mmu.hpp"
+#include "../core/Fs.hpp"
 
 Mmu::Mmu(Mmu& other) {
     auto size = other.memory.size();
@@ -27,20 +28,20 @@ void Mmu::SetPermission(VirtualAddr addr, size_t size, Permission perm) {
     std::fill(permission.begin() + addr, permission.begin() + end, perm);
 }
 
-void Mmu::WriteFrom(VirtualAddr addr, const std::vector<u8>& buf) {
-    size_t end = addr + buf.size();
+bzmu::result<int, VmExitResult> Mmu::WriteFrom(VirtualAddr addr, const std::vector<u8>& buf) {
+    auto end_bound = checked_add(addr, buf.size());
+    if (!end_bound.has_value())
+        return bzmu::result_error{ VmExitResult(VmExit::AddressIntegerOverflow) };
 
-    if (addr >= memory.size()) 
-        throw std::out_of_range("Starting address is out of bounds");
-
-    if (end > memory.size()) 
-        throw std::out_of_range("End address exceeds bounds");
+    size_t end = end_bound.value();
+    if (end > memory.size())
+        return bzmu::result_error{ VmExitResult(AddressMissed(addr, buf.size())) };
 
     bool has_raw = false;
     for (size_t i = addr; i < end; ++i) {
-        if ((permission[i] & PERM_WRITE) == 0) 
-            throw std::runtime_error("WriteFrom: Access violation");
         has_raw |= (permission[i] & PERM_RAW) != 0;
+        if ((permission[i] & PERM_WRITE) == 0)
+            return bzmu::result_error{ VmExitResult(WriteFault(i)) };
     }
 
     //Compute dirty bit blocks
@@ -69,22 +70,25 @@ void Mmu::WriteFrom(VirtualAddr addr, const std::vector<u8>& buf) {
     }
 
     std::copy(buf.begin(), buf.end(), memory.begin() + addr);
+    return 0;
 }
 
-void Mmu::ReadIntoPerm(VirtualAddr addr, std::vector<u8>& buf, Permission expected_perm) {
+bzmu::result<int, VmExitResult> 
+Mmu::ReadIntoPerm(VirtualAddr addr, std::vector<u8>& buf, Permission expected_perm) {
     // Check if the address and size are within bounds
-    if (addr >= memory.size()) 
-        throw std::out_of_range("Starting address is out of bounds");
+    auto end_bound = checked_add(addr, buf.size());
+    if (!end_bound.has_value())
+        return bzmu::result_error{ VmExitResult(VmExit::AddressIntegerOverflow) };
 
-    size_t end = addr + buf.size();
-    if (end > memory.size()) 
-        throw std::out_of_range("End address exceeds bounds");
+    size_t end = end_bound.value();
+    if (end > permission.size())
+        return bzmu::result_error{ VmExitResult(AddressMissed(addr, buf.size())) };
 
     // Check read permissions for the specific range
     if (expected_perm != 0) {
         for (size_t i = addr; i < end; ++i) {
             if ((permission[i] & expected_perm) != expected_perm)
-                throw std::runtime_error("ReadInto: Access violation");
+                return bzmu::result_error{ VmExitResult(ReadFault(i)) };
         }
     }
 
@@ -94,11 +98,12 @@ void Mmu::ReadIntoPerm(VirtualAddr addr, std::vector<u8>& buf, Permission expect
 
     // Copy data from memory to the buffer
     std::copy(memory.begin() + addr, memory.begin() + end, buf.begin());
+    return 0;
 }
 
 
-void Mmu::ReadInto(VirtualAddr addr, std::vector<u8>& buf) {
-    ReadIntoPerm(addr, buf, PERM_READ);
+bzmu::result<int, VmExitResult> Mmu::ReadInto(VirtualAddr addr, std::vector<u8>& buf) {
+    return ReadIntoPerm(addr, buf, PERM_READ);
 }
 
 void Mmu::ReadInstruction(Ldasm& lendec, VirtualAddr addr, std::vector<u8>& buf, Permission exp_perm) {
@@ -140,4 +145,21 @@ void Mmu::Reset(const Mmu& other) {
 
     //Clear the dirty list
     dirty.clear();
+}
+
+bzmu::result<std::vector<u8>, VmExitResult>
+Mmu::peek_perms(VirtualAddr addr, size_t size, Permission exp_perms) {
+    auto end = checked_add(addr, size);
+    if (!end.has_value())
+        return bzmu::result_error{ VmExitResult(VmExit::AddressIntegerOverflow) };
+    if (end.value() > memory.size())
+        return bzmu::result_error{ VmExitResult(AddressMissed(addr, size)) };
+
+    //TODO: use end in the loop (replace addr + size)
+    for (size_t i = addr; i < addr + size; ++i) {
+        if ((permission[i] & exp_perms) != exp_perms)
+            return bzmu::result_error{ VmExitResult(ReadFault(i)) };
+    }
+
+    return std::vector<u8>(memory.begin() + addr, memory.begin() + addr + size);
 }

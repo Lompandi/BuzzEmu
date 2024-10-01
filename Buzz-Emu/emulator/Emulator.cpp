@@ -15,7 +15,7 @@
 
 //TUTORIAL AT: https://youtu.be/iM3s8-umRO0?t=28749 
 
-bool Emulator::LoadExecutable(const std::string& filename, const std::vector<Section>& sections) {
+bool Emulator::LoadExecutable(const std::string& filename /*,const std::vector<Section>& sections*/) {
 	bzmu::pe::pe_mapper mapper;
 	std::vector<u8> contents = read_file(filename);
 	mapper.map_into_mem(*this, contents);
@@ -88,7 +88,7 @@ void opcode_cpy(uint8_t* opcode, const uint8_t* src, size_t size) {
 	}
 }
 //TODO: currently using lineaer emulating , will change it to table if so
-VmExit Emulator::Run() {
+VmExitResult Emulator::Run() {
 	Ldasm lendec;
 
 	u64 debug_instr_count = 0;

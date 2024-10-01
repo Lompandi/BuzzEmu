@@ -5,54 +5,49 @@
 
 #include "emulator/Emulator.hpp"
 #include "emulation/x86/InstructionHandler.hpp"
+#include "emulator/Syscalls.hpp"
 
 #include "pe/ImportHandler.hpp"
 #include "pe/ExportHandler.hpp"
 
-u64 test_func(u64 u1, u64 u2) {
-    return u1;
+void vmexit_to_string(VmExitResult result) {
+    if (std::holds_alternative<VmExit>(result)) {
+        auto exit_code = std::get<VmExit>(result);
+        switch (exit_code) {
+        case VmExit::Exit:
+            std::cout << "Vm exited with exit()-like syscall\n"; 
+            break;
+        case VmExit::SyscallIntegerOverflow:
+            std::cout << "Vm exited with syscall integer overflow\n";
+            break;
+        case VmExit::AddressIntegerOverflow:
+            std::cout << "Vm exited with address integer overflow\n";
+            break;
+        default:
+            std::cout << "Vm exited with unknown reason\n";
+            break;
+        }
+    }
+    else if (std::holds_alternative<ReadFault>(result)) {
+        ReadFault exit_code = std::get<ReadFault>(result);
+        std::cout << "Vm exited with ReadFault(0x" << std::hex << exit_code.addr << ")\n";
+    }
+    else if (std::holds_alternative<WriteFault>(result)) {
+        WriteFault exit_code = std::get<WriteFault>(result);
+        std::cout << "Vm exited with ReadFault(0x" << std::hex << exit_code.addr << ")\n";
+    }
+    else if (std::holds_alternative<AddressMissed>(result)) {
+        AddressMissed exit_code = std::get<AddressMissed>(result);
+        std::cout << "Vm exited with ReadFault(0x" << std::hex << exit_code.addr << ", " << std::dec << exit_code.size << ")\n";
+    }
 }
 
 int main()
 {
-    //NOT FINISHED¡@YET: https://youtu.be/iM3s8-umRO0?t=29354
+    //NOT FINISHED¡@YET: https://youtu.be/iM3s8-umRO0?t=30843
     Emulator emu(32 * 1024 * 1024);
     
-    //Load the application into the emulator
-    Section text_section = {
-        .file_off = 0x00000400,
-        .virt_addr = 0x00001000,
-        .file_size = 0x00001200,
-        .mem_size = 0x00001200,
-        .permission = (PERM_READ | PERM_EXEC)
-    };
-
-    Section rdata = {
-        .file_off = 0x00001600,
-        .virt_addr = 0x00003000,
-        .file_size = 0x00001400,
-        .mem_size = 0x00001400,
-        .permission = (PERM_READ)
-    };
-
-    Section data = {
-        .file_off = 0x00002a00,
-        .virt_addr = 0x00005000,
-        .file_size = 0x00000200,
-        .mem_size = 0x00000200,
-        .permission = (PERM_READ | PERM_WRITE)
-    };
-
-    Section tail_data = {
-        .file_off = 0x00002c00,
-        .virt_addr = 0x00006000,
-        .file_size = 0x00000600,
-        .mem_size = 0x00000600,
-        .permission = PERM_READ
-    };
-    //==================Load===================
-    std::vector<Section> load_segment = {text_section, rdata, data, tail_data};
-    emu.LoadExecutable("C:\\Users\\USER\\source\\repos\\ConsoleApplication1\\x64\\Release\\ConsoleApplication1.exe", load_segment);
+    emu.LoadExecutable("C:\\Users\\USER\\source\\repos\\ConsoleApplication1\\x64\\Release\\ConsoleApplication1.exe");
 
     Emulator forked(emu);
 
@@ -75,46 +70,32 @@ int main()
     push(argv);   // Push argv (pointer to the argument vector)
     push(1ull);   // Push argc (number of arguments; in this case, 1 argument)
 
+    VmExitResult num;
     while (true) {
-        auto num = emu.Run();
-        switch (num) {
-            //Syscall processing, which is not going to be emulated in guest 
-            //this will be handle if i have time
-        case VmExit::Syscall:
-            switch (emu.Reg(Register::Rax)) {
-            case 0x07: //NtDeviceIoControlFile
-                break;
-            case 0x08: { //NtWriteFile
-                auto handle_ptr          = emu.Reg(Register::Rcx);
-                auto event_ptr           = emu.Reg(Register::Rdi);
-                auto apc_runtime_ref     = emu.Reg(Register::R8);
-                auto apc_ctx_ptr         = emu.Reg(Register::R9);
-                auto io_status_block_ref = emu.Reg(Register::R10);
-                p0 buf_ptr = reinterpret_cast<p0>(pop(emu));
-                u64  len                 = pop(emu);
-                auto byte_offset         = pop(emu);
-                p64 key = reinterpret_cast<p64>(pop(emu));
-
-                for (auto i = 0; i < max_inst_length; ++i) {
-                    auto current_buf = reinterpret_cast<p64>(buf_ptr)[i];
-                    //we will handle only for writing memory case now
-                    auto ptr = reinterpret_cast<p0>(checked_add(reinterpret_cast<u64>(buf_ptr)
-                        , byte_offset).value());
-
-                    if (!ptr) {
-                        num = VmExit::SyscallIntegerOverflow;
-                        break;
-                    }
+        num = emu.Run();
+        if (std::holds_alternative<VmExit>(num)) {
+            auto vmexit_enum = std::get<VmExit>(num);
+            switch (vmexit_enum) {
+            case VmExit::Syscall: {
+                auto result = handle_syscall(emu);
+                if (!result.has_value()) {
+                    num = result.error();
+                    goto exit_loop; // Jump to exit the loop
                 }
+
+                // Advance PC
+                auto pc = emu.Reg(Register::Rip);
+                emu.SetReg<u64>(Register::Rip, pc + /* Sizeof syscall */2);
                 break;
             }
-            case 0x2C: //NtTerminateProcess
-                //exit
-                break;
+            default:
+                goto exit_loop;
             }
         }
     }
 
-    emu.Run();
+exit_loop:
+    vmexit_to_string(num);
+    //emu.Run();
 }
 
